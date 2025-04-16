@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Writing Assistant</title>
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="container">
+        <h3>AI Writing Assistant</h3>
+
+        <div class="section">
+            <label for="selected-text">Selected Text:</label>
+            <button id="get-selection-btn">Get Selection</button>
+            <textarea id="selected-text" rows="4" readonly placeholder="Click 'Get Selection' or select text on the page before opening..."></textarea>
+        </div>
+
+        <div class="actions section">
+            <p>Actions:</p>
+            <button id="fix-grammar-btn" class="action-btn" disabled>Fix Grammar</button>
+            <button id="rewrite-btn" class="action-btn" disabled>Rewrite</button>
+            </div>
+
+        <div class="section">
+            <label for="result-text">Result:</label>
+            <textarea id="result-text" rows="5" readonly placeholder="Result will appear here..."></textarea>
+            <button id="copy-result-btn" disabled>Copy Result</button>
+        </div>
+
+        <div id="status-message" class="status"></div>
+    </div>
+
+    <script src="popup.js"></script>
+</body>
+</html>

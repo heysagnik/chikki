@@ -1,205 +1,366 @@
-.ai-assistant-button {
-    background: linear-gradient(135deg, #7c4dff 0%, #651fff 100%);
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    font-size: 16px;
-    line-height: 32px;
-    text-align: center;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(44, 62, 80, 0.12), 0 1.5px 4px rgba(44, 62, 80, 0.10);
-    transition: background 0.2s, box-shadow 0.2s, transform 0.1s;
-    padding: 0;
-    display: none;
-    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-    outline: none;
-    z-index: 2147483647;
+/* Core styling preserved from existing CSS */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --chikki-primary: #4F46E5;
+  --chikki-primary-hover: #4338CA;
+  --chikki-secondary: #FF7262;
+  --chikki-neutral-50: #F9FAFB;
+  --chikki-neutral-100: #F3F4F6;
+  --chikki-neutral-200: #E5E7EB;
+  --chikki-neutral-300: #D1D5DB;
+  --chikki-neutral-400: #9CA3AF;
+  --chikki-neutral-500: #6B7280;
+  --chikki-neutral-600: #4B5563;
+  --chikki-neutral-700: #374151;
+  --chikki-neutral-800: #1F2937;
+  --chikki-neutral-900: #111827;
+  --chikki-shadow-sm: 0px 1px 3px rgba(0, 0, 0, 0.08);
+  --chikki-shadow-md: 0px 4px 6px -1px rgba(0, 0, 0, 0.08), 0px 2px 4px -1px rgba(0, 0, 0, 0.04);
+  --chikki-shadow-lg: 0px 10px 15px -3px rgba(0, 0, 0, 0.08), 0px 4px 6px -2px rgba(0, 0, 0, 0.04);
+  --chikki-border-radius: 10px;
+  --chikki-transition-duration: 0.3s;
+  --chikki-transition-easing: cubic-bezier(0.16, 1, 0.3, 1);
+  /* Fixed dimensions for containers */
+  --chikki-prompt-width: 340px;
+  --chikki-prompt-height: 60px;
+  --chikki-result-width: 400px;
+  --chikki-result-min-height: 200px;
+  --chikki-edit-icon-size: 42px;
 }
 
-.ai-assistant-button:hover:not(:disabled) {
-    background: linear-gradient(135deg, #651fff 0%, #7c4dff 100%);
-    box-shadow: 0 6px 16px rgba(44, 62, 80, 0.18);
-    transform: translateY(-2px) scale(1.05);
+#chikki-container {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important;
+  z-index: 2147483647 !important;
 }
 
-.ai-assistant-button:disabled {
-    background: #ccc;
-    color: #eee;
-    cursor: not-allowed;
-    box-shadow: none;
+#chikki-edit-icon,
+#chikki-prompt-container,
+#chikki-result-container {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  background-color: var(--chikki-neutral-50) !important;
+  border-radius: var(--chikki-border-radius) !important;
+  box-shadow: var(--chikki-shadow-lg) !important;
+  border: 1px solid var(--chikki-neutral-200) !important;
+  color: var(--chikki-neutral-900) !important;
+  font-size: 14px !important;
+  line-height: 1.5 !important;
+  box-sizing: border-box !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  transition: all var(--chikki-transition-duration) var(--chikki-transition-easing) !important;
 }
 
-.ai-assistant-popup {
-    position: absolute;
-    min-width: 280px;
-    max-width: 400px;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 8px 32px rgba(44, 62, 80, 0.18);
-    border: 1px solid #ececec;
-    padding: 18px 20px 14px 20px;
-    font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
-    font-size: 15px;
-    color: #222;
-    z-index: 2147483647;
-    animation: fadeIn 0.18s ease;
+/* Edit Icon with horizontal expansion animation */
+#chikki-edit-icon {
+  align-items: center !important;
+  justify-content: center !important;
+  width: var(--chikki-edit-icon-size) !important;
+  height: var(--chikki-edit-icon-size) !important;
+  padding: 0 !important;
+  background-color: var(--chikki-primary) !important;
+  border: none !important;
+  cursor: pointer !important;
+  border-radius: 50% !important;
+  overflow: visible !important;
+  transform-origin: center !important;
+  transition: width 0.3s var(--chikki-transition-easing),
+              height 0.3s var(--chikki-transition-easing),
+              border-radius 0.3s var(--chikki-transition-easing),
+              background-color 0.3s var(--chikki-transition-easing),
+              transform 0.25s var(--chikki-transition-easing) !important;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
+#chikki-edit-icon.expanding {
+  width: var(--chikki-prompt-width) !important;
+  height: var(--chikki-prompt-height) !important;
+  border-radius: 16px !important;
+  background-color: var(--chikki-neutral-50) !important;
+  border: 1px solid var(--chikki-neutral-200) !important;
+  justify-content: flex-start !important;
+  padding: 14px !important;
+  transition: width 0.35s var(--chikki-transition-easing),
+              height 0.25s var(--chikki-transition-easing),
+              border-radius 0.2s var(--chikki-transition-easing),
+              background-color 0.2s var(--chikki-transition-easing) !important;
 }
 
-.ai-assistant-popup-header {
-    font-weight: 600;
-    font-size: 16px;
-    margin-bottom: 8px;
-    color: #651fff;
+/* Skeleton loading animation */
+@keyframes chikki-skeleton-loading {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
-.ai-assistant-popup-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 12px;
-    justify-content: flex-end;
+/* Prompt Container */
+#chikki-prompt-container {
+  padding: 14px !important;
+  width: var(--chikki-prompt-width) !important;
+  height: var(--chikki-prompt-height) !important;
+  max-width: var(--chikki-prompt-width) !important;
+  transform-origin: center !important;
+  opacity: 0 !important;
+  display: block !important;
+  pointer-events: none !important;
+  border-radius: 16px !important;
+  background: linear-gradient(to bottom, var(--chikki-neutral-50), white) !important;
+  box-shadow: var(--chikki-shadow-md), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+  transition: opacity 0.3s var(--chikki-transition-easing),
+              transform 0.3s var(--chikki-transition-easing),
+              height 0.35s var(--chikki-transition-easing),
+              width 0.35s var(--chikki-transition-easing) !important;
+  overflow: hidden !important;
 }
 
-.ai-assistant-popup-action-btn {
-    background: #7c4dff;
-    color: #fff;
-    border: none;
-    border-radius: 6px;
-    padding: 6px 16px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.18s;
-    font-family: inherit;
+#chikki-prompt-container.active {
+  opacity: 1 !important;
+  pointer-events: all !important;
 }
 
-.ai-assistant-popup-action-btn:hover:not(:disabled) {
-    background: #651fff;
+#chikki-prompt-container.loading {
+  height: var(--chikki-result-min-height) !important;
+  width: var(--chikki-result-width) !important;
+  transition: height 0.35s var(--chikki-transition-easing) 0.1s,
+              width 0.35s var(--chikki-transition-easing) 0.1s !important;
 }
 
-.ai-assistant-popup-action-btn:disabled {
-    background: #ccc;
-    color: #eee;
-    cursor: not-allowed;
+#chikki-prompt-container.transitioning-out {
+  opacity: 0 !important;
+  transform: translateY(5px) !important;
 }
 
-.ai-assistant-highlight {
-    background: #e0e7ff;
-    border-radius: 3px;
-    padding: 0 2px;
-    transition: background 0.2s;
+#chikki-prompt-input {
+  width: 100% !important;
+  padding: 12px 16px !important;
+  border: 1.5px solid var(--chikki-neutral-200) !important;
+  border-radius: 10px !important;
+  font-size: 14px !important;
+  font-family: inherit !important;
+  background-color: white !important;
+  color: var(--chikki-neutral-900) !important;
+  outline: none !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease-in-out !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
 }
 
-.ai-assistant-spinner {
-    display: inline-block;
-    width: 22px;
-    height: 22px;
-    border: 3px solid #ececec;
-    border-top: 3px solid #7c4dff;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    margin-right: 8px;
-    vertical-align: middle;
+#chikki-prompt-input:focus {
+  border-color: var(--chikki-primary) !important;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.1) !important;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg);}
+#chikki-prompt-input::placeholder {
+  color: var(--chikki-neutral-400) !important;
 }
 
-.ai-assistant-error {
-    color: #d32f2f;
-    background: #fff0f0;
-    border-radius: 5px;
-    padding: 8px 12px;
-    margin-top: 10px;
-    font-size: 14px;
-    border: 1px solid #ffd6d6;
+/* Enhanced Skeleton loader */
+#chikki-skeleton-container {
+  padding: 16px 0 !important;
+  width: 100% !important;
+  display: none;
+  height: calc(var(--chikki-result-min-height) - 60px) !important;
+  transition: all 0.35s var(--chikki-transition-easing) !important;
 }
 
-.ai-assistant-success {
-    color: #388e3c;
-    background: #f0fff4;
-    border-radius: 5px;
-    padding: 8px 12px;
-    margin-top: 10px;
-    font-size: 14px;
-    border: 1px solid #b2f2bb;
+.chikki-skeleton-line {
+  height: 18px !important;
+  border-radius: 6px !important;
+  background: linear-gradient(
+    90deg,
+    var(--chikki-neutral-200) 0%,
+    var(--chikki-neutral-50) 50%,
+    var(--chikki-neutral-200) 100%
+  ) !important;
+  background-size: 200% 100% !important;
+  animation: chikki-skeleton-loading 1.5s infinite !important;
+  margin-bottom: 14px !important;
+  opacity: 0.8 !important;
 }
 
-/* Magic Band Button */
-.magic-band-btn {
-    background: hsl(224, 82%, 56%);
-    color: white;
-    border: none;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    font-size: 18px;
-    line-height: 36px;
-    text-align: center;
-    cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-    padding: 0;
-    outline: none;
-    z-index: 2147483647;
-    display: none;
+/* Make different width lines for more realistic loading */
+.chikki-skeleton-line:nth-child(1) { width: 90% !important; }
+.chikki-skeleton-line:nth-child(2) { width: 100% !important; }
+.chikki-skeleton-line:nth-child(3) { width: 75% !important; }
+.chikki-skeleton-line:nth-child(4) { width: 85% !important; }
+.chikki-skeleton-line:nth-child(5) { width: 60% !important; }
+
+/* Result Container */
+#chikki-result-container {
+  padding: 18px !important;
+  width: var(--chikki-result-width) !important;
+  min-height: var(--chikki-result-min-height) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  transform: translateY(10px) !important;
+  transform-origin: bottom center !important;
+  border-radius: 16px !important;
+  box-shadow: var(--chikki-shadow-lg), 0 0 0 1px rgba(0, 0, 0, 0.05) !important;
+  background: linear-gradient(to bottom, var(--chikki-neutral-50), white) !important;
+  transition: opacity 0.3s var(--chikki-transition-easing),
+              transform 0.3s var(--chikki-transition-easing),
+              height 0.3s var(--chikki-transition-easing) !important;
 }
 
-.magic-band-btn:hover {
-    transform: scale(1.05);
-    background: hsl(224, 82%, 51%);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+#chikki-result-container.active {
+  opacity: 1 !important;
+  pointer-events: all !important;
+  transform: translateY(0) !important;
 }
 
-.magic-band-btn:active {
-    transform: scale(0.97);
+/* Make result content non-selectable */
+#chikki-generated-content {
+  flex: 1 !important;
+  color: var(--chikki-neutral-800) !important;
+  font-size: 14px !important;
+  line-height: 1.6 !important;
+  overflow-y: auto !important;
+  max-height: calc(var(--chikki-result-min-height) - 80px) !important;
+  padding: 2px 4px !important;
+  border-radius: 8px !important;
+  
+  /* Make content non-selectable */
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
 }
 
-/* Tone Popup */
-.tone-popup {
-    animation: fadeIn 200ms cubic-bezier(0.16, 1, 0.3, 1);
+.chikki-button-container {
+  display: flex !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin-top: 8px !important;
+  padding-top: 12px !important;
+  border-top: 1px solid var(--chikki-neutral-200) !important;
 }
 
-/* Tone Picker */
-.tone-picker {
-    background: #f5f5fa;
-    border: 1px solid #ececec;
-    position: relative;
-    overflow: visible;
+#chikki-regenerate-button,
+#chikki-replace-button {
+  padding: 8px 14px !important;
+  border-radius: 8px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease-in-out !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  border: none !important;
+  outline: none !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
 }
 
-/* Tone Dot */
-.tone-dot {
-    transition: left 0.1s, top 0.1s;
+#chikki-regenerate-button {
+  background-color: var(--chikki-neutral-100) !important;
+  color: var(--chikki-neutral-700) !important;
 }
 
-/* Loading Skeleton */
-.loading-skeleton {
-    animation: skeleton-loading 1.5s infinite linear;
-    background: linear-gradient(90deg,#eee 25%,#f3f3f3 50%,#eee 75%);
-    background-size: 200% 100%;
-}
-@keyframes skeleton-loading {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+#chikki-regenerate-button:hover {
+  background-color: var(--chikki-neutral-200) !important;
 }
 
-/* Scrollbar styling for the result area */
-.tone-result::-webkit-scrollbar {
-    width: 6px;
+#chikki-replace-button {
+  background-color: var(--chikki-primary) !important;
+  color: white !important;
 }
 
-.tone-result::-webkit-scrollbar-track {
-    background: transparent;
+#chikki-replace-button:hover {
+  background-color: var(--chikki-primary-hover) !important;
 }
 
-.tone-result::-webkit-scrollbar-thumb {
-    background-color: hsl(240, 5%, 30%);
-    border-radius: 3px;
+/* Loading spinner for better feedback */
+@keyframes chikki-pulse {
+  0% { opacity: 0.6; transform: scale(0.98); }
+  50% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0.6; transform: scale(0.98); }
+}
+
+.chikki-loading-pulse {
+  animation: chikki-pulse 1.5s infinite ease-in-out !important;
+}
+
+
+
+
+/* Markdown styling for better readability */
+.chikki-markdown h1,
+.chikki-markdown h2,
+.chikki-markdown h3,
+.chikki-markdown h4,
+.chikki-markdown h5,
+.chikki-markdown h6 {
+  margin-top: 16px !important;
+  margin-bottom: 8px !important;
+  font-weight: 600 !important;
+  line-height: 1.25 !important;
+  color: var(--chikki-neutral-900) !important;
+}
+
+.chikki-markdown h1 { font-size: 18px !important; }
+.chikki-markdown h2 { font-size: 16px !important; }
+.chikki-markdown h3 { font-size: 15px !important; }
+.chikki-markdown h4, 
+.chikki-markdown h5, 
+.chikki-markdown h6 { font-size: 14px !important; }
+
+.chikki-markdown p {
+  margin: 8px 0 !important;
+}
+
+.chikki-markdown ul,
+.chikki-markdown ol {
+  margin: 8px 0 !important;
+  padding-left: 24px !important;
+}
+
+.chikki-markdown li {
+  margin: 4px 0 !important;
+}
+
+.chikki-markdown a {
+  color: var(--chikki-primary) !important;
+  text-decoration: none !important;
+}
+
+.chikki-markdown a:hover {
+  text-decoration: underline !important;
+}
+
+.chikki-markdown code {
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
+  padding: 2px 5px !important;
+  font-size: 13px !important;
+  background-color: var(--chikki-neutral-100) !important;
+  border-radius: 4px !important;
+}
+
+.chikki-markdown pre {
+  padding: 12px !important;
+  overflow-x: auto !important;
+  background-color: var(--chikki-neutral-100) !important;
+  border-radius: 6px !important;
+  margin: 12px 0 !important;
+}
+
+.chikki-markdown pre code {
+  background-color: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+}
+
+.chikki-markdown blockquote {
+  margin: 8px 0 !important;
+  padding: 0 12px !important;
+  color: var(--chikki-neutral-600) !important;
+  border-left: 3px solid var(--chikki-neutral-300) !important;
+}
+
+.chikki-markdown hr {
+  border: none !important;
+  height: 1px !important;
+  background-color: var(--chikki-neutral-200) !important;
+  margin: 16px 0 !important;
 }

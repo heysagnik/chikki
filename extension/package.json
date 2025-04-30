@@ -12,6 +12,6 @@
   "license": "ISC",
   "type": "commonjs",
   "devDependencies": {
-    "vite": "^6.2.6"
+    "vite": "^6.2.7"
   }
 }

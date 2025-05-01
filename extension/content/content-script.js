@@ -5,13 +5,17 @@ class Chikki {
     this.currentRange = null;
     this.generatedText = '';
     this.isLoading = false;
-    this.hasTextSelection = false; // Add this new property
+    this.hasTextSelection = false;
     this.init();
   }
 
   init() {
-    this.createUIElements();
-    this.setupEventListeners();
+    try {
+      this.createUIElements();
+      this.setupEventListeners();
+    } catch (error) {
+      console.error("Error initializing Chikki:", error);
+    }
   }
 
   createUIElements() {
@@ -26,7 +30,9 @@ class Chikki {
     if (!this.container) {
       this.container = document.createElement('div');
       this.container.id = 'chikki-container';
-      this.container.style.cssText = 'position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 2147483647;';
+      // Initially hide the container
+      this.container.style.cssText =
+        'position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 2147483647; display: none;';
       document.body.appendChild(this.container);
     }
   }
@@ -79,7 +85,7 @@ class Chikki {
   setupResultContainer() {
     this.resultContainer = document.createElement('div');
     this.resultContainer.id = 'chikki-result-container';
-    this.resultContainer.style.display = 'block';
+    this.resultContainer.style.display = 'none';
 
     this.generatedContent = document.createElement('div');
     this.generatedContent.id = 'chikki-generated-content';
@@ -97,9 +103,7 @@ class Chikki {
     this.replaceButton.id = 'chikki-replace-button';
     this.replaceButton.textContent = this.hasTextSelection ? 'Replace' : 'Insert';
     this.replaceButton.setAttribute('aria-label', 
-      this.hasTextSelection ? 
-      'Replace selection with generated text' : 
-      'Insert generated text at cursor position');
+      this.hasTextSelection ? 'Replace selection with generated text' : 'Insert generated text at cursor position');
     
     buttonContainer.appendChild(this.regenerateButton);
     buttonContainer.appendChild(this.replaceButton);
@@ -109,252 +113,322 @@ class Chikki {
   }
 
   setupEventListeners() {
-    document.addEventListener('mouseup', this.handleTextSelection.bind(this), true);
-    
-    let selectionTimeout;
-    document.addEventListener('selectionchange', () => {
-      clearTimeout(selectionTimeout);
-      selectionTimeout = setTimeout(() => this.handleSelectionChange(), 150);
-    });
+    try {
+        // Use mouseup as the primary trigger for showing the icon after selection
+        document.addEventListener('mouseup', this.handleTextSelection.bind(this), true);
 
-    this.editIcon.addEventListener('click', this.handleEditIconClick.bind(this));
-    this.promptInput.addEventListener('keydown', this.handlePromptInputKeydown.bind(this));
-    this.replaceButton.addEventListener('click', this.handleReplaceButtonClick.bind(this));
-    this.regenerateButton.addEventListener('click', this.handleRegenerateButtonClick.bind(this));
-    document.addEventListener('mousedown', this.handleClickOutside.bind(this), true);
-  }
-
-  handleSelectionChange() {
-    if (this.editIcon.style.display === 'none' && 
-        !this.promptContainer.classList.contains('active') && 
-        !this.resultContainer.classList.contains('active')) {
-      this.handleTextSelection();
+        // Check for each element before attaching the event listener
+        if (this.editIcon) {
+            this.editIcon.addEventListener('click', this.handleEditIconClick.bind(this));
+        }
+        if (this.promptInput) {
+            this.promptInput.addEventListener('keydown', this.handlePromptInputKeydown.bind(this));
+        }
+        if (this.replaceButton) {
+            this.replaceButton.addEventListener('click', this.handleReplaceButtonClick.bind(this));
+        }
+        if (this.regenerateButton) {
+            this.regenerateButton.addEventListener('click', this.handleRegenerateButtonClick.bind(this));
+        }
+        // Use mousedown for clicks outside to hide UI elements promptly
+        document.addEventListener('mousedown', this.handleClickOutside.bind(this), true);
+    } catch (error) {
+        console.error("Error setting up event listeners:", error);
     }
-  }
+}
 
   handleTextSelection(event) {
-    if (event && this.isClickInsideComponent(event)) return;
-
-    setTimeout(() => {
-      const selection = window.getSelection();
-      const selectedText = selection.toString().trim();
-      
-      // Check for selection first
-      if (selectedText && selection.rangeCount > 0) {
-        this.hasTextSelection = true; // Flag that we have an actual text selection
-        if (this.shouldUpdateSelection(selectedText)) {
-          this.updateSelectionData(selectedText, selection);
-        }
-      } else {
-        // Check if cursor is in an input or textarea
-        const activeElement = document.activeElement;
-        const isInputField = activeElement.tagName === 'INPUT' || 
-                            activeElement.tagName === 'TEXTAREA' || 
-                            activeElement.isContentEditable;
-        
-        if (isInputField) {
-          this.hasTextSelection = false; // Flag that we only have cursor placement
-          // Handle cursor in text field with no selection
-          this.handleCursorInTextField(activeElement);
-        } else {
-          this.clearSelectionIfNeeded();
-        }
+    try {
+      // Prevent handling clicks inside our own UI
+      if (event && this.isClickInsideComponent(event)) {
+        // If the click is inside the UI, don't hide the icon immediately,
+        // let the specific component handlers manage state.
+        return;
       }
-      
-      // Update replace/insert button text if it exists
-      this.updateReplaceButtonText();
-    }, 50);
+
+      // Use a small delay to allow the selection object to update after mouseup
+      setTimeout(() => {
+        const selection = window.getSelection();
+
+        // No selection or empty selection range
+        if (!selection || selection.rangeCount === 0) {
+          this.hideEditIcon();
+          this.hasTextSelection = false;
+          this.updateReplaceButtonText();
+          return;
+        }
+
+        const range = selection.getRangeAt(0);
+        const selectedText = selection.toString().trim();
+
+        // Collapsed selection (cursor) or empty selected text
+        if (range.collapsed || !selectedText || selectedText.length === 0) {
+          this.hasTextSelection = false;
+          // Only hide the icon if the prompt/result aren't active
+          if (!this.promptContainer?.classList.contains('active') && !this.resultContainer?.classList.contains('active')) {
+             this.hideEditIcon();
+          }
+          this.updateReplaceButtonText();
+          return;
+        }
+
+        // Determine the target element and check if it's editable
+        let targetElement = range.commonAncestorContainer;
+        if (targetElement.nodeType === Node.TEXT_NODE) {
+          targetElement = targetElement.parentNode;
+        }
+
+        const isValidTarget = targetElement && (
+          targetElement.tagName === 'INPUT' ||
+          targetElement.tagName === 'TEXTAREA' ||
+          targetElement.isContentEditable
+        );
+
+        if (!isValidTarget) {
+          // Selection is not inside a valid editable target
+          this.hasTextSelection = false;
+           // Only hide the icon if the prompt/result aren't active
+          if (!this.promptContainer?.classList.contains('active') && !this.resultContainer?.classList.contains('active')) {
+             this.hideEditIcon();
+          }
+          this.updateReplaceButtonText();
+          return;
+        }
+
+        // Valid selection in an editable target
+        this.hasTextSelection = true;
+        if (this.shouldUpdateSelection(selectedText)) {
+          this.updateSelectionData(selectedText, selection); // Position and show the icon
+        }
+        this.updateReplaceButtonText();
+
+      }, 50); // Delay helps ensure selection is stable
+    } catch (error) {
+      console.error("Error in handleTextSelection:", error);
+      this.hideEditIcon(); // Ensure icon is hidden on error
+    }
   }
 
   updateReplaceButtonText() {
     if (this.replaceButton) {
       this.replaceButton.textContent = this.hasTextSelection ? 'Replace' : 'Insert';
-      this.replaceButton.setAttribute('aria-label', 
-        this.hasTextSelection ? 
-        'Replace selection with generated text' : 
-        'Insert generated text at cursor position');
-    }
-  }
-
-  handleCursorInTextField(element) {
-    // Store empty selection but valid context
-    this.selectedText = '';
-    
-    // Create a range for the cursor position
-    const range = document.createRange();
-    
-    if (element.isContentEditable) {
-      // Handle contenteditable elements
-      const selection = window.getSelection();
-      if (selection.rangeCount > 0) {
-        range.setStart(selection.anchorNode, selection.anchorOffset);
-        range.setEnd(selection.anchorNode, selection.anchorOffset);
-      } else {
-        // If no range, place at beginning of element
-        range.setStart(element, 0);
-        range.setEnd(element, 0);
-      }
-    } else {
-      // For inputs and textareas, we need a different approach
-      // Insert a temporary span to get position
-      const tempSpan = document.createElement('span');
-      tempSpan.textContent = '|';
-      
-      // Store current values
-      const start = element.selectionStart;
-      const value = element.value;
-      
-      // Insert temporary element into the DOM near the input
-      element.parentNode.insertBefore(tempSpan, element.nextSibling);
-      
-      // Position the span to match cursor
-      const inputRect = element.getBoundingClientRect();
-      tempSpan.style.position = 'absolute';
-      tempSpan.style.top = `${inputRect.top + 5}px`;
-      tempSpan.style.left = `${inputRect.left + 5}px`;
-      
-      // Create a range that includes this span
-      range.selectNode(tempSpan);
-      
-      // Use the range position for edit icon, then remove the span
-      const rect = range.getBoundingClientRect();
-      this.currentSelection = window.getSelection();
-      this.currentRange = range.cloneRange();
-      this.positionEditIcon(rect);
-      
-      tempSpan.remove();
-      return;
-    }
-    
-    // For contenteditable, we can use the range directly
-    const rect = range.getBoundingClientRect();
-    if (rect.width > 0 || rect.height > 0) {
-      this.currentSelection = window.getSelection();
-      this.currentRange = range.cloneRange();
-      this.positionEditIcon(rect);
-    } else {
-      // If we can't get a good rect, use the element's rectangle
-      const elemRect = element.getBoundingClientRect();
-      this.currentSelection = window.getSelection();
-      this.currentRange = range.cloneRange();
-      this.positionEditIcon(elemRect);
+      this.replaceButton.setAttribute('aria-label',
+        this.hasTextSelection ? 'Replace selection with generated text' : 'Insert generated text at cursor position');
     }
   }
 
   shouldUpdateSelection(selectedText) {
-    return selectedText !== this.selectedText || 
-           (this.editIcon.style.display === 'none' && 
-           !this.promptContainer.classList.contains('active') && 
-           !this.resultContainer.classList.contains('active')) ||
-           // Add this condition to allow empty text for input fields
-           (!selectedText && document.activeElement && 
-            (document.activeElement.tagName === 'INPUT' || 
-             document.activeElement.tagName === 'TEXTAREA' ||
-             document.activeElement.isContentEditable));
+    // Only update if we have valid text AND either it's different from previous selection
+    // or our UI elements aren't already active
+    return selectedText && (
+      selectedText !== this.selectedText || 
+      (this.editIcon && this.editIcon.style.display === 'none' &&
+      this.promptContainer && !this.promptContainer.classList.contains('active') &&
+      this.resultContainer && !this.resultContainer.classList.contains('active'))
+    );
   }
 
   updateSelectionData(selectedText, selection) {
-    this.selectedText = selectedText;
-    const range = selection.getRangeAt(0);
-    const rect = range.getBoundingClientRect();
+    try {
+      this.selectedText = selectedText;
+      const range = selection.getRangeAt(0);
+      const rect = range.getBoundingClientRect();
 
-    if (rect.width > 0 || rect.height > 0) {
-      this.hasTextSelection = selectedText.length > 0;
-      this.currentSelection = selection;
-      this.currentRange = range.cloneRange();
-      this.positionEditIcon(rect);
-      this.updateReplaceButtonText();
-    } else {
-      this.hideAllUIElements();
+      if (rect.width > 0 || rect.height > 0) {
+        this.hasTextSelection = selectedText.length > 0;
+        this.currentSelection = selection;
+        this.currentRange = range.cloneRange();
+        // Show the container only when a valid selection is made
+        if (this.container) {
+          this.container.style.display = 'block';
+        }
+        this.positionEditIcon(rect);
+        this.updateReplaceButtonText();
+      } else {
+        this.hideAllUIElements();
+      }
+    } catch (error) {
+      console.error("Error updating selection data:", error);
     }
+  }
+
+  adjustPositionForViewport(desiredTop, desiredLeft, elementWidth, elementHeight) {
+    const scrollX = window.scrollX || 0;
+    const scrollY = window.scrollY || 0;
+    const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+    const viewportHeight = window.innerHeight || document.documentElement.clientHeight;
+    const margin = 8;
+
+    let adjustedLeft = Math.max(scrollX + margin, desiredLeft);
+    adjustedLeft = Math.min(adjustedLeft, scrollX + viewportWidth - elementWidth - margin);
+
+    let adjustedTop = Math.max(scrollY + margin, desiredTop);
+    adjustedTop = Math.min(adjustedTop, scrollY + viewportHeight - elementHeight - margin);
+
+    return { top: adjustedTop, left: adjustedLeft };
   }
 
   positionEditIcon(rect) {
-    const iconSize = 42;
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-    
-    let top = scrollY + rect.bottom + 8;
-    let left = scrollX + rect.right - iconSize / 2;
-    
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    left = Math.max(scrollX + iconSize/2, Math.min(left, scrollX + viewportWidth - iconSize/2));
-    
-    if (top + iconSize > scrollY + viewportHeight) {
-      top = scrollY + rect.top - iconSize - 8;
-    }
-    
-    this.editIconPosition = { top, left, iconSize };
-    
-    this.editIcon.style.top = `${this.editIconPosition.top}px`;
-    this.editIcon.style.left = `${this.editIconPosition.left}px`;
-    this.editIcon.style.display = 'flex';
-    this.editIcon.classList.remove('expanding');
+    try {
+      const iconSize = 40;
+      const scrollX = window.scrollX || 0;
+      const scrollY = window.scrollY || 0;
+      
+      let desiredTop = scrollY + rect.bottom + 8;
+      let desiredLeft = scrollX + rect.left + (rect.width / 2) - (iconSize / 2);
 
-    this.promptContainer.classList.remove('active', 'transitioning-out');
-    this.promptContainer.style.display = 'none';
-    this.resultContainer.classList.remove('active');
+      if (desiredTop + iconSize + 8 > scrollY + (window.innerHeight || document.documentElement.clientHeight)) {
+        desiredTop = scrollY + rect.top - iconSize - 8;
+      }
+
+      const adjustedPosition = this.adjustPositionForViewport(desiredTop, desiredLeft, iconSize, iconSize);
+
+      this.editIconPosition = { 
+        top: adjustedPosition.top, 
+        left: adjustedPosition.left, 
+        width: iconSize, 
+        height: iconSize 
+      };
+      
+      if (this.editIcon) {
+        this.editIcon.style.top = `${adjustedPosition.top}px`;
+        this.editIcon.style.left = `${adjustedPosition.left}px`;
+        this.editIcon.style.display = 'flex';
+        this.editIcon.classList.remove('expanding');
+      }
+
+      if (this.promptContainer) {
+        this.promptContainer.classList.remove('active', 'transitioning-out');
+        this.promptContainer.style.display = 'none';
+      }
+      
+      if (this.resultContainer) {
+        this.resultContainer.classList.remove('active');
+        this.resultContainer.style.display = 'none';
+      }
+    } catch (error) {
+      console.error("Error positioning edit icon:", error);
+    }
   }
 
-  clearSelectionIfNeeded() {
-    if (!this.promptContainer.classList.contains('active') && 
-        !this.resultContainer.classList.contains('active')) {
-      this.selectedText = '';
+  // Ensure hideEditIcon is correctly implemented
+  hideEditIcon() {
+    if (this.editIcon) {
       this.editIcon.style.display = 'none';
     }
+    // Don't clear selectedText here, it might be needed if prompt/result is active
+    // this.selectedText = '';
   }
 
+  // Ensure clearSelectionIfNeeded correctly hides the icon
+  clearSelectionIfNeeded() {
+    // This function might not be strictly necessary anymore with the refined handleTextSelection
+    // but keeping it ensures the icon hides if state becomes inconsistent.
+    if (!this.hasTextSelection &&
+        (!this.promptContainer || !this.promptContainer.classList.contains('active')) &&
+        (!this.resultContainer || !this.resultContainer.classList.contains('active')))
+    {
+        this.hideEditIcon();
+    }
+  }
+
+
   handleEditIconClick(event) {
-    event.stopPropagation();
-    event.preventDefault();
+    try {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
 
-    if (!this.currentRange) return;
+      if (!this.currentRange || !this.editIconPosition) return;
 
-    const iconSize = this.editIconPosition.iconSize;
-    
-    this.promptContainer.style.top = `${this.editIconPosition.top}px`;
-    this.promptContainer.style.left = `${this.editIconPosition.left - iconSize/2}px`;
-    this.promptContainer.style.display = 'flex';
-    
-    this.editIcon.classList.add('expanding');
-    
-    setTimeout(() => {
-      this.promptContainer.classList.add('active');
+      const promptWidth = 340;
+      const promptHeight = 56;
+      
+      if (!this.editIcon) return;
+      const iconRect = this.editIcon.getBoundingClientRect();
+      const desiredTop = iconRect.top;
+      const desiredLeft = iconRect.left + (iconRect.width / 2) - (promptWidth / 2);
+
+      const adjustedPosition = this.adjustPositionForViewport(desiredTop, desiredLeft, promptWidth, promptHeight);
+
+      if (this.promptContainer) {
+        this.promptContainer.style.top = `${adjustedPosition.top}px`;
+        this.promptContainer.style.left = `${adjustedPosition.left}px`;
+        this.promptContainer.style.width = `${promptWidth}px`;
+        this.promptContainer.style.height = `${promptHeight}px`;
+        this.promptContainer.style.display = 'flex';
+      }
+      
+      if (this.editIcon) {
+        this.editIcon.classList.add('expanding');
+      }
       
       setTimeout(() => {
-        this.promptInput.value = '';
-        this.promptInput.disabled = false;
-        this.loadingIndicator.style.display = 'none';
-        this.skeletonContainer.style.display = 'none';
-        this.promptInput.focus();
+        if (this.promptContainer) {
+          this.promptContainer.classList.add('active');
+        }
         
-        this.editIcon.style.display = 'none';
-        this.editIcon.classList.remove('expanding');
-      }, 250);
-    }, 50);
+        setTimeout(() => {
+          if (this.promptInput) {
+            this.promptInput.value = '';
+            this.promptInput.disabled = false;
+          }
+          
+          if (this.loadingIndicator) {
+            this.loadingIndicator.style.display = 'none';
+          }
+          
+          if (this.skeletonContainer) {
+            this.skeletonContainer.style.display = 'none';
+          }
+          
+          if (this.promptInput) {
+            this.promptInput.focus();
+          }
+          
+          if (this.editIcon) {
+            this.editIcon.style.display = 'none';
+            this.editIcon.classList.remove('expanding');
+          }
+        }, 150);
+      }, 20);
+    } catch (error) {
+      console.error("Error handling edit icon click:", error);
+    }
   }
 
   renderMarkdown(text) {
-    let sanitized = this.sanitizeHTML(text);
-    const html = this.parseMarkdown(sanitized);
-    this.generatedContent.className = 'chikki-markdown';
-    this.generatedContent.innerHTML = html;
+    try {
+      let sanitized = this.sanitizeHTML(text);
+      const html = this.parseMarkdown(sanitized);
+      if (this.generatedContent) {
+        this.generatedContent.className = 'chikki-markdown';
+        this.generatedContent.innerHTML = html;
+      }
+    } catch (error) {
+      console.error("Error rendering markdown:", error);
+    }
   }
 
   parseMarkdown(text) {
-    text = this.processHeaders(text);
-    text = this.processFormatting(text);
-    text = this.processLists(text);
-    text = this.processCodeElements(text);
-    text = this.processBlockElements(text);
-    text = this.processParagraphs(text);
-    
-    return text;
+    try {
+      text = this.processHeaders(text);
+      text = this.processFormatting(text);
+      text = this.processLists(text);
+      text = this.processCodeElements(text);
+      text = this.processBlockElements(text);
+      text = this.processParagraphs(text);
+      
+      return text;
+    } catch (error) {
+      console.error("Error parsing markdown:", error);
+      return text || '';
+    }
   }
 
   processHeaders(text) {
+    if (!text) return '';
     text = text.replace(/^# (.*?)$/gm, '<h1>$1</h1>');
     text = text.replace(/^## (.*?)$/gm, '<h2>$1</h2>');
     text = text.replace(/^### (.*?)$/gm, '<h3>$1</h3>');
@@ -365,6 +439,7 @@ class Chikki {
   }
 
   processFormatting(text) {
+    if (!text) return '';
     text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
     text = text.replace(/__(.*?)__/g, '<strong>$1</strong>');
     text = text.replace(/\*(.*?)\*/g, '<em>$1</em>');
@@ -374,6 +449,7 @@ class Chikki {
   }
 
   processLists(text) {
+    if (!text) return '';
     text = text.replace(/^\* (.*?)$/gm, '<ul><li>$1</li></ul>');
     text = text.replace(/^\- (.*?)$/gm, '<ul><li>$1</li></ul>');
     text = text.replace(/<\/ul>\s*<ul>/g, '');
@@ -384,18 +460,21 @@ class Chikki {
   }
 
   processCodeElements(text) {
+    if (!text) return '';
     text = text.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
     text = text.replace(/`([^`]+)`/g, '<code>$1</code>');
     return text;
   }
 
   processBlockElements(text) {
+    if (!text) return '';
     text = text.replace(/^> (.*?)$/gm, '<blockquote>$1</blockquote>');
     text = text.replace(/^---$/gm, '<hr>');
     return text;
   }
 
   processParagraphs(text) {
+    if (!text) return '';
     text = text.replace(/\r\n/g, '\n');
     const paragraphs = text.split(/\n\n+/);
     
@@ -410,344 +489,686 @@ class Chikki {
   }
 
   renderGeneratedContent() {
-    const containsMarkdown = /[#*_\[\]`]/.test(this.generatedText);
-    
-    if (containsMarkdown) {
-      this.renderMarkdown(this.generatedText);
-    } else {
-      const sanitizedText = this.sanitizeHTML(this.generatedText);
-      this.generatedContent.innerHTML = sanitizedText;
+    try {
+      if (!this.generatedText) {
+        return;
+      }
+      
+      const containsMarkdown = /[#*_\[\]`]/.test(this.generatedText);
+      
+      if (containsMarkdown) {
+        this.renderMarkdown(this.generatedText);
+      } else {
+        const sanitizedText = this.sanitizeHTML(this.generatedText);
+        if (this.generatedContent) {
+          this.generatedContent.innerHTML = sanitizedText;
+        }
+      }
+      
+      this.updateReplaceButtonText();
+      if (this.resultContainer) {
+        this.resultContainer.style.display = 'block';
+      }
+    } catch (error) {
+      console.error("Error rendering generated content:", error);
     }
-    
-    this.updateReplaceButtonText();
-    this.resultContainer.style.display = 'block';
   }
 
   sanitizeHTML(text) {
+    if (!text) return '';
     return text
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
   }
 
   async handlePromptInputKeydown(event) {
-    if (event.key === 'Enter' && !this.isLoading) {
-      event.preventDefault();
-      const prompt = this.promptInput.value.trim();
-      if (!prompt) return;
+    try {
+      if (event.key === 'Enter' && !this.isLoading) {
+        event.preventDefault();
+        
+        if (!this.promptInput) return;
+        const prompt = this.promptInput.value.trim();
+        if (!prompt) return;
 
-      this.isLoading = true;
-      this.promptInput.disabled = true;
-      
-      const promptRect = this.promptContainer.getBoundingClientRect();
-      
-      this.showLoadingState();
-      
-      try {
-        const apiResult = await this.fetchGeneratedText(prompt);
-        this.generatedText = apiResult;
+        this.isLoading = true;
+        if (this.promptInput) {
+          this.promptInput.disabled = true;
+        }
         
-        this.positionResultContainer(promptRect);
-        this.renderGeneratedContent();
+        // No longer need promptRect here
+        // if (!this.promptContainer) return;
+        // const promptRect = this.promptContainer.getBoundingClientRect(); 
         
-        this.animateTransitionToResult();
-      } catch (err) {
-        this.handleApiError(err, promptRect);
-      } finally {
-        this.resetLoadingState();
+        this.showLoadingState();
+        
+        try {
+          const apiResult = await this.fetchGeneratedText(prompt);
+          this.generatedText = apiResult;
+          
+          // Pass the stored icon position instead of promptRect
+          this.positionResultContainer(this.editIconPosition); 
+          this.renderGeneratedContent();
+          
+          this.animateTransitionToResult();
+        } catch (err) {
+          // Pass the stored icon position instead of promptRect
+          this.handleApiError(err, this.editIconPosition); 
+        } finally {
+          this.resetLoadingState();
+        }
+      } else if (event.key === 'Escape') {
+        event.preventDefault();
+        this.hideAllUIElements();
       }
-    } else if (event.key === 'Escape') {
-      event.preventDefault();
-      this.hideAllUIElements();
+    } catch (error) {
+      console.error("Error handling prompt input keydown:", error);
+      this.isLoading = false;
+      if (this.promptInput) {
+        this.promptInput.disabled = false;
+      }
     }
   }
 
   showLoadingState() {
-    this.promptInput.style.opacity = '0';
-    this.promptInput.style.transform = 'translateY(10px)';
-    this.promptContainer.classList.add('loading');
-    this.skeletonContainer.style.display = 'block';
-    
-    const skeletonLines = this.skeletonContainer.querySelectorAll('.chikki-skeleton-line');
-    skeletonLines.forEach(line => line.classList.add('chikki-loading-pulse'));
+    try {
+      if (this.promptInput) {
+        this.promptInput.style.opacity = '0';
+        this.promptInput.style.transform = 'translateY(10px)';
+      }
+      
+      if (this.promptContainer) {
+        this.promptContainer.classList.add('loading');
+      }
+      
+      if (this.skeletonContainer) {
+        this.skeletonContainer.style.display = 'block';
+      }
+      
+      if (this.skeletonContainer) {
+        const skeletonLines = this.skeletonContainer.querySelectorAll('.chikki-skeleton-line');
+        skeletonLines.forEach(line => line.classList.add('chikki-loading-pulse'));
+      }
+    } catch (error) {
+      console.error("Error showing loading state:", error);
+    }
   }
 
   async fetchGeneratedText(prompt) {
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    try {
+      const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-    const systemInstructions = `
-    You are a precise content generation assistant. You are a content writer with years of experience, you are the writing assistant.
-    IMPORTANT: Generate ONLY the exact content type requested without explanations, alternatives, or additional content.
-    - If a title is requested, return ONLY a title.
-    - If an email is requested, return ONLY a properly formatted email.
-    - If code is requested, return ONLY the code without explanations.
-    - If a summary is requested, provide ONLY the summary.
-    - Never provide multiple options or variations unless explicitly asked.
-    - Never add introductory or concluding remarks like "Here is the content:" or "Sure, here it is:".
-    - Never explain your reasoning or methodology.
-    - Format your response appropriately for the requested content type.
-    - Keep strictly to the requested content format and length.
-    - Respond ONLY with the generated content itself.
-    `;
+      const systemInstructions = `
+      You are a literary virtuoso, a writing assistant with the precision of Hemingway, the wit of Wilde, and the imagination of García Márquez.
+      IMPORTANT: Craft ONLY the exact content requested—nothing more, nothing less.
+      - For a title, deliver ONLY that perfect constellation of words that captures essence.
+      - For an email, compose ONLY the complete message in its most effective form.
+      - For code, present ONLY the elegant solution, unadorned by explanation.
+      - For a summary, distill ONLY the essential narrative, preserving its soul.
+      - Never divide your creative vision into variations unless specifically requested.
+      - Resist the temptation to frame your work with unnecessary preambles or conclusions.
+      - Keep the architecture of your craft invisible, as the best writing appears effortless.
+      - Format your response with the structure the content naturally demands.
+      - Honor requested length and format as a poet honors the sonnet's fourteen lines.
+      - Present ONLY the requested creation itself—pure, complete, and illuminating.
+      `;
 
-
-    const [apiResult] = await Promise.all([
-      new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage(
-          {
-            type: 'generate',
-            prompt: `${systemInstructions}\n\nContext: "${this.selectedText}"\nRequest: "${prompt}"`
-          },
-          response => {
-            if (chrome.runtime.lastError) {
-              return reject(new Error(chrome.runtime.lastError.message));
-            }
-            if (response && response.error) {
-              reject(new Error(response.error));
-            } else if (response && response.data) {
-              resolve(response.data);
-            } else {
-              reject(new Error("Invalid response from background script"));
-            }
+      const [apiResult] = await Promise.all([
+        new Promise((resolve, reject) => {
+          if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+            reject(new Error("Chrome runtime API is not available"));
+            return;
           }
-        );
-      }),
-      delay(900)
-    ]);
+          
+          chrome.runtime.sendMessage(
+            {
+              type: 'generate',
+              prompt: `${systemInstructions}\n\nContext: "${this.selectedText || ''}"\nRequest: "${prompt}"`
+            },
+            response => {
+              if (chrome.runtime.lastError) {
+                return reject(new Error(chrome.runtime.lastError.message || "Chrome runtime error occurred"));
+              }
+              
+              if (!response) {
+                return reject(new Error("Empty response from background script"));
+              } 
+              
+              if (response.error) {
+                return reject(new Error(response.error));
+              }
+              
+              if (response.data !== undefined) {
+                resolve(response.data);
+              } else {
+                reject(new Error("Invalid response format from background script"));
+              }
+            }
+          );
+        }),
+        delay(900)
+      ]);
 
-    return apiResult;
+      return apiResult;
+    } catch (error) {
+      console.error("Error fetching generated text:", error);
+      throw error;
+    }
   }
 
-  positionResultContainer(promptRect) {
-    const resultTop = promptRect.top - 16 - this.resultContainer.offsetHeight;
-    this.resultContainer.style.top = `${resultTop < 0 ? promptRect.bottom + 16 : resultTop}px`;
-    this.resultContainer.style.left = `${promptRect.left}px`;
-    this.promptContainer.classList.add('transitioning-out');
+  positionResultContainer(iconPosition) { // Accept iconPosition
+    try {
+      const resultWidth = 400; 
+      const resultMinHeight = 180; 
+      
+      if (!iconPosition) {
+          console.error("Cannot position result container: Missing icon position.");
+          // Attempt to fallback to prompt container if visible, otherwise hide?
+          // For safety, just return if iconPosition is missing.
+          if(this.promptContainer && this.promptContainer.style.display !== 'none') {
+              const promptRect = this.promptContainer.getBoundingClientRect();
+              iconPosition = { 
+                  top: promptRect.top + window.scrollY, 
+                  left: promptRect.left + window.scrollX, 
+                  width: promptRect.width, 
+                  height: promptRect.height 
+              };
+          } else {
+              this.hideAllUIElements();
+              return;
+          }
+      }
+
+      // Calculate desired position based on icon (centered horizontally)
+      // Note: iconPosition should already have scroll offsets included from its calculation
+      let desiredTop = iconPosition.top; // Start at the same top coordinate
+      let desiredLeft = iconPosition.left + (iconPosition.width / 2) - (resultWidth / 2);
+
+      // Adjust the desired position to ensure it stays within the viewport
+      const adjustedPosition = this.adjustPositionForViewport(
+        desiredTop, 
+        desiredLeft, 
+        resultWidth, 
+        resultMinHeight // Still using minHeight for initial calc
+      );
+
+      if (this.resultContainer) {
+        // Apply the adjusted position
+        this.resultContainer.style.top = `${adjustedPosition.top}px`;
+        this.resultContainer.style.left = `${adjustedPosition.left}px`;
+        this.resultContainer.style.width = `${resultWidth}px`;
+        this.resultContainer.style.display = 'flex'; 
+      }
+      
+      // Keep the transition logic for the prompt container
+      if (this.promptContainer) {
+        this.promptContainer.classList.add('transitioning-out');
+      }
+    } catch (error) {
+      console.error("Error positioning result container:", error);
+    }
   }
 
   animateTransitionToResult() {
-    setTimeout(() => {
-      this.resultContainer.classList.add('active');
-      
+    try {
       setTimeout(() => {
-        this.promptContainer.classList.remove('active', 'transitioning-out', 'loading');
-        this.promptContainer.style.display = 'none';
-        
-        const skeletonLines = this.skeletonContainer.querySelectorAll('.chikki-skeleton-line');
-        skeletonLines.forEach(line => line.classList.remove('chikki-loading-pulse'));
-      }, 300);
-    }, 150);
+        if (this.resultContainer) {
+          this.resultContainer.classList.add('active');
+        }
+
+        setTimeout(() => {
+          if (this.promptContainer) {
+            this.promptContainer.classList.remove('active', 'transitioning-out', 'loading');
+            this.promptContainer.style.display = 'none';
+          }
+
+          if (this.skeletonContainer) {
+            const skeletonLines = this.skeletonContainer.querySelectorAll('.chikki-skeleton-line');
+            skeletonLines.forEach(line => line.classList.remove('chikki-loading-pulse'));
+          }
+        }, 300);
+      }, 50);
+    } catch (error) {
+      console.error("Error animating transition to result:", error);
+    }
   }
 
-  handleApiError(err, promptRect) {
-    console.error("Error generating text:", err);
-    
-    this.generatedContent.style.color = '#e53e3e';
-    this.generatedContent.textContent = `⚠️ Error: ${err.message || 'Unknown error'}`;
-    
-    const resultTop = promptRect.top - 16 - this.resultContainer.offsetHeight;
-    this.resultContainer.style.top = `${resultTop < 0 ? promptRect.bottom + 16 : resultTop}px`;
-    this.resultContainer.style.left = `${promptRect.left}px`;
-    
-    if (this.replaceButton) {
-      this.replaceButton.style.display = 'none';
-    }
-    
-    this.promptContainer.classList.add('transitioning-out');
-    setTimeout(() => {
-      this.resultContainer.classList.add('active');
+  handleApiError(err, iconPosition) { // Accept iconPosition
+    try {
+      console.error("Error generating text:", err);
+
+      const errorMessage = err.message || 'Unknown error';
       
+      if (this.generatedContent) {
+        this.generatedContent.style.color = '#e53e3e';
+        this.generatedContent.textContent = `⚠️ Error: ${errorMessage}`;
+      }
+
+      const resultWidth = 400;
+      const resultMinHeight = 180;
+
+      if (!iconPosition) {
+          console.error("Cannot position error container: Missing icon position.");
+           if(this.promptContainer && this.promptContainer.style.display !== 'none') {
+              const promptRect = this.promptContainer.getBoundingClientRect();
+              iconPosition = { 
+                  top: promptRect.top + window.scrollY, 
+                  left: promptRect.left + window.scrollX, 
+                  width: promptRect.width, 
+                  height: promptRect.height 
+              };
+          } else {
+              this.hideAllUIElements();
+              return;
+          }
+      }
+
+      // Calculate desired position based on icon (centered horizontally)
+      let desiredTop = iconPosition.top;
+      let desiredLeft = iconPosition.left + (iconPosition.width / 2) - (resultWidth / 2);
+
+      const adjustedPosition = this.adjustPositionForViewport(
+          desiredTop, 
+          desiredLeft, 
+          resultWidth, 
+          resultMinHeight
+      );
+
+      if (this.resultContainer) {
+        this.resultContainer.style.top = `${adjustedPosition.top}px`;
+        this.resultContainer.style.left = `${adjustedPosition.left}px`;
+        this.resultContainer.style.width = `${resultWidth}px`;
+        this.resultContainer.style.display = 'flex';
+      }
+
+      // ... (rest of the error handling: hide buttons, transition) ...
+      if (this.replaceButton) {
+        this.replaceButton.style.display = 'none';
+      }
+      if (this.regenerateButton) {
+        this.regenerateButton.style.display = 'none';
+      }
+      if (this.promptContainer) {
+        this.promptContainer.classList.add('transitioning-out');
+      }
       setTimeout(() => {
-        this.promptContainer.classList.remove('active', 'transitioning-out');
-        this.promptContainer.style.display = 'none';
-      }, 300);
-    }, 150);
+        if (this.resultContainer) {
+          this.resultContainer.classList.add('active');
+        }
+        setTimeout(() => {
+          if (this.promptContainer) {
+            this.promptContainer.classList.remove('active', 'transitioning-out', 'loading');
+            this.promptContainer.style.display = 'none';
+          }
+        }, 300);
+      }, 50);
+    } catch (error) {
+      console.error("Error handling API error:", error);
+    }
   }
 
   resetLoadingState() {
-    this.isLoading = false;
-    this.promptInput.disabled = false;
-    this.promptInput.value = '';
-    this.loadingIndicator.style.display = 'none';
-    this.skeletonContainer.style.display = 'none';
-    this.promptInput.style.display = 'block';
-    this.promptInput.style.opacity = '1';
-    this.promptInput.style.transform = 'none';
-    
-    if (this.replaceButton) {
-      this.replaceButton.style.display = '';
+    try {
+      this.isLoading = false;
+      
+      if (this.promptInput) {
+        this.promptInput.disabled = false;
+        this.promptInput.value = '';
+        this.promptInput.style.display = 'block';
+        this.promptInput.style.opacity = '1';
+        this.promptInput.style.transform = 'none';
+      }
+      
+      if (this.skeletonContainer) {
+        this.skeletonContainer.style.display = 'none';
+      }
+
+      if (this.replaceButton) {
+        this.replaceButton.style.display = '';
+      }
+      
+      if (this.regenerateButton) {
+        this.regenerateButton.style.display = '';
+      }
+    } catch (error) {
+      console.error("Error resetting loading state:", error);
     }
   }
 
   async handleRegenerateButtonClick(event) {
-    event.stopPropagation();
-    event.preventDefault();
-    
-    if (this.isLoading || !this.selectedText) return;
-    
-    this.isLoading = true;
-    const resultRect = this.resultContainer.getBoundingClientRect();
-    this.resultContainer.classList.remove('active');
-    
-    setTimeout(async () => {
-      this.setupRegenerationLoading(resultRect);
-      
-      try {
-        const apiResult = await this.fetchRegeneratedText();
-        this.generatedText = apiResult;
-        
-        this.prepareResultContainerForRegeneration(resultRect);
-        this.renderGeneratedContent();
-        this.animateRegenerationResult();
-      } catch (err) {
-        this.handleRegenerationError(err);
-      } finally {
-        this.resetRegenerationState();
+    try {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
       }
-    }, 300);
+
+      if (this.isLoading) return;
+      if (!this.resultContainer) return;
+
+      this.isLoading = true;
+      
+      // Store the current position *before* hiding
+      const currentResultRect = this.resultContainer.getBoundingClientRect(); 
+      this.resultContainer.classList.remove('active');
+
+      // Wait for fade-out animation before showing loading
+      setTimeout(async () => { 
+        // Pass the stored position rect
+        this.setupRegenerationLoading(currentResultRect); 
+
+        try {
+          const apiResult = await this.fetchRegeneratedText();
+          this.generatedText = apiResult;
+
+          // Pass the stored position rect
+          this.prepareResultContainerForRegeneration(currentResultRect); 
+          this.renderGeneratedContent();
+          this.animateRegenerationResult();
+        } catch (err) {
+           // Pass the stored position rect
+          this.handleRegenerationError(err, currentResultRect);
+        } 
+        // No finally block needed here as resetRegenerationState is called in animateRegenerationResult
+      }, 300); // Match CSS transition duration
+    } catch (error) {
+      console.error("Error handling regenerate button click:", error);
+      this.isLoading = false; // Ensure loading state is reset on error
+    }
   }
 
-  setupRegenerationLoading(resultRect) {
-    this.promptContainer.style.top = `${resultRect.top}px`;
-    this.promptContainer.style.left = `${resultRect.left}px`;
-    this.promptContainer.style.display = 'flex';
-    
-    this.promptContainer.classList.add('loading', 'active');
-    this.promptInput.style.display = 'none';
-    this.skeletonContainer.style.display = 'block';
+  setupRegenerationLoading(currentResultRect) { // Accept stored rect
+    try {
+      const loadingWidth = 400;
+      const loadingHeight = 180;
+
+      // Use stored rect's position + scroll offsets as desired position
+      const desiredTop = currentResultRect.top + window.scrollY;
+      const desiredLeft = currentResultRect.left + window.scrollX;
+
+      const adjustedPosition = this.adjustPositionForViewport(
+          desiredTop, 
+          desiredLeft, 
+          loadingWidth, 
+          loadingHeight
+      );
+
+      if (this.promptContainer) {
+        this.promptContainer.style.top = `${adjustedPosition.top}px`;
+        this.promptContainer.style.left = `${adjustedPosition.left}px`;
+        this.promptContainer.style.width = `${loadingWidth}px`;
+        this.promptContainer.style.height = `${loadingHeight}px`;
+        this.promptContainer.style.display = 'flex';
+        this.promptContainer.classList.add('loading', 'active');
+      }
+      
+      if (this.promptInput) {
+        this.promptInput.style.display = 'none';
+      }
+      
+      if (this.skeletonContainer) {
+        this.skeletonContainer.style.display = 'block';
+        const skeletonLines = this.skeletonContainer.querySelectorAll('.chikki-skeleton-line');
+        skeletonLines.forEach(line => line.classList.add('chikki-loading-pulse'));
+      }
+    } catch (error) {
+      console.error("Error setting up regeneration loading:", error);
+    }
   }
 
   async fetchRegeneratedText() {
-    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
-    
-    const systemInstructions = `
-    You are a precise content generation assistant.
-    IMPORTANT: Generate ONLY the exact content type that was previously requested.
-    - Maintain the same format and structure as would be expected for this content type
-    - Do not add explanations, comments, or additional material
-    - Create a different version but keep the same style and purpose
-    - Never provide multiple options or alternatives
-    - Never add introductory or concluding remarks
-    - Never explain your reasoning or changes made
-    `;
-    
-    const [apiResult] = await Promise.all([
-      new Promise((resolve, reject) => {
-        chrome.runtime.sendMessage(
-          {
-            type: 'generate',
-            prompt: `${systemInstructions}\n\nContext: "${this.selectedText}"\nRequest: "Generate an alternative version of the previously requested content."`
-          },
-          response => {
-            if (chrome.runtime.lastError) {
-              return reject(new Error(chrome.runtime.lastError.message));
-            }
-            if (response && response.error) {
-              reject(new Error(response.error));
-            } else if (response && response.data) {
-              resolve(response.data);
-            } else {
-              reject(new Error("Invalid response from background script"));
-            }
+    try {
+      const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+      const systemInstructions = `
+      You are a precise content generation assistant.
+      IMPORTANT: Generate ONLY the exact content type that was previously requested.
+      - Maintain the same format and structure as would be expected for this content type
+      - Do not add explanations, comments, or additional material
+      - Create a different version but keep the same style and purpose
+      - Never provide multiple options or alternatives
+      - Never add introductory or concluding remarks
+      - Never explain your reasoning or changes made
+      `;
+
+      const originalPrompt = (this.promptInput && this.promptInput.value) ? 
+                           this.promptInput.value : 
+                           "Generate an alternative version of the previously requested content.";
+
+      const [apiResult] = await Promise.all([
+        new Promise((resolve, reject) => {
+          if (!chrome || !chrome.runtime || !chrome.runtime.sendMessage) {
+            reject(new Error("Chrome runtime API is not available"));
+            return;
           }
-        );
-      }),
-      delay(900)
-    ]);
-    
-    return apiResult;
+          
+          chrome.runtime.sendMessage(
+            {
+              type: 'generate',
+              prompt: `${systemInstructions}\n\nContext: "${this.selectedText || ''}"\nRequest: "${originalPrompt}" (regenerated)`
+            },
+            response => {
+              if (chrome.runtime.lastError) {
+                return reject(new Error(chrome.runtime.lastError.message || "Chrome runtime error occurred"));
+              }
+              
+              if (!response) {
+                return reject(new Error("Empty response from background script"));
+              } 
+              
+              if (response.error) {
+                return reject(new Error(response.error));
+              }
+              
+              if (response.data !== undefined) {
+                resolve(response.data);
+              } else {
+                reject(new Error("Invalid response format from background script"));
+              }
+            }
+          );
+        }),
+        delay(900)
+      ]);
+
+      return apiResult;
+    } catch (error) {
+      console.error("Error fetching regenerated text:", error);
+      throw error;
+    }
   }
 
-  prepareResultContainerForRegeneration(resultRect) {
-    this.resultContainer.style.top = `${resultRect.top}px`;
-    this.resultContainer.style.left = `${resultRect.left}px`;
-    this.promptContainer.classList.add('transitioning-out');
+  prepareResultContainerForRegeneration(currentResultRect) { // Accept stored rect
+    try {
+      const resultWidth = 400;
+      const resultMinHeight = 180;
+
+      // Use stored rect's position + scroll offsets as desired position
+      const desiredTop = currentResultRect.top + window.scrollY;
+      const desiredLeft = currentResultRect.left + window.scrollX;
+
+      const adjustedPosition = this.adjustPositionForViewport(
+          desiredTop, 
+          desiredLeft, 
+          resultWidth, 
+          resultMinHeight
+      );
+
+      if (this.resultContainer) {
+        this.resultContainer.style.top = `${adjustedPosition.top}px`;
+        this.resultContainer.style.left = `${adjustedPosition.left}px`;
+        this.resultContainer.style.width = `${resultWidth}px`;
+        this.resultContainer.style.display = 'flex'; // Ensure it's ready to be shown
+      }
+      
+      if (this.promptContainer) {
+        this.promptContainer.classList.add('transitioning-out');
+      }
+    } catch (error) {
+      console.error("Error preparing result container for regeneration:", error);
+    }
   }
 
   animateRegenerationResult() {
-    setTimeout(() => {
-      this.resultContainer.classList.add('active');
-      
+    try {
       setTimeout(() => {
-        this.promptContainer.classList.remove('active', 'transitioning-out', 'loading');
-        this.promptContainer.style.display = 'none';
-        this.promptInput.style.display = 'block';
-      }, 300);
-    }, 150);
+        if (this.resultContainer) {
+          this.resultContainer.classList.add('active');
+        }
+
+        setTimeout(() => {
+          if (this.promptContainer) {
+            this.promptContainer.classList.remove('active', 'transitioning-out', 'loading');
+            this.promptContainer.style.display = 'none';
+          }
+          
+          if (this.promptInput) {
+            this.promptInput.style.display = 'block';
+          }
+          
+          if (this.skeletonContainer) {
+            this.skeletonContainer.style.display = 'none';
+            const skeletonLines = this.skeletonContainer.querySelectorAll('.chikki-skeleton-line');
+            skeletonLines.forEach(line => line.classList.remove('chikki-loading-pulse'));
+          }
+          
+          this.resetRegenerationState();
+        }, 300);
+      }, 50);
+    } catch (error) {
+      console.error("Error animating regeneration result:", error);
+    }
   }
 
-  handleRegenerationError(err) {
-    console.error("Error regenerating text:", err);
-    
-    this.generatedContent.style.color = '#e53e3e';
-    this.generatedContent.textContent = `⚠️ Error: ${err.message || 'Unknown error'}`;
-    
-    this.promptContainer.classList.add('transitioning-out');
-    setTimeout(() => {
-      this.resultContainer.classList.add('active');
+  handleRegenerationError(err, currentResultRect) { // Accept stored rect
+    try {
+      console.error("Error regenerating text:", err);
+
+      const errorMessage = err.message || 'Unknown error';
       
+      if (this.generatedContent) {
+        this.generatedContent.style.color = '#e53e3e';
+        this.generatedContent.textContent = `⚠️ Regen Error: ${errorMessage}`;
+      }
+
+      const resultWidth = 400;
+      const resultMinHeight = 180;
+
+      // Use stored rect's position + scroll offsets as desired position
+      const desiredTop = currentResultRect.top + window.scrollY;
+      const desiredLeft = currentResultRect.left + window.scrollX;
+
+      const adjustedPosition = this.adjustPositionForViewport(
+          desiredTop, 
+          desiredLeft, 
+          resultWidth, 
+          resultMinHeight
+      );
+
+      if (this.resultContainer) {
+        this.resultContainer.style.top = `${adjustedPosition.top}px`;
+        this.resultContainer.style.left = `${adjustedPosition.left}px`;
+        this.resultContainer.style.width = `${resultWidth}px`;
+        this.resultContainer.style.display = 'flex'; // Ensure it's ready to be shown
+      }
+
+      // ... (rest of error handling: hide buttons, transition) ...
+      if (this.replaceButton) {
+        this.replaceButton.style.display = 'none';
+      }
+      if (this.regenerateButton) {
+        this.regenerateButton.style.display = 'none';
+      }
+      if (this.promptContainer) {
+        this.promptContainer.classList.add('transitioning-out');
+      }
       setTimeout(() => {
-        this.promptContainer.classList.remove('active', 'transitioning-out');
-        this.promptContainer.style.display = 'none';
-      }, 300);
-    }, 150);
+        if (this.resultContainer) {
+          this.resultContainer.classList.add('active');
+        }
+        setTimeout(() => {
+          if (this.promptContainer) {
+            this.promptContainer.classList.remove('active', 'transitioning-out', 'loading');
+            this.promptContainer.style.display = 'none';
+          }
+        }, 300);
+      }, 50);
+    } catch (error) {
+      console.error("Error handling regeneration error:", error);
+    }
   }
 
   resetRegenerationState() {
-    this.isLoading = false;
-    this.promptInput.disabled = false;
-    this.loadingIndicator.style.display = 'none';
-    this.skeletonContainer.style.display = 'none';
+    try {
+      this.isLoading = false;
+      
+      if (this.promptInput) {
+        this.promptInput.disabled = false;
+      }
+      
+      if (this.skeletonContainer) {
+        this.skeletonContainer.style.display = 'none';
+      }
+      
+      if (this.replaceButton) {
+        this.replaceButton.style.display = '';
+      }
+      
+      if (this.regenerateButton) {
+        this.regenerateButton.style.display = '';
+      }
+    } catch (error) {
+      console.error("Error resetting regeneration state:", error);
+    }
   }
 
   handleReplaceButtonClick(event) {
-    event.stopPropagation();
-    event.preventDefault();
+    try {
+      if (event) {
+        event.stopPropagation();
+        event.preventDefault();
+      }
 
-    if (this.currentRange && this.generatedText !== undefined) {
+      if (!this.currentRange || this.generatedText === undefined) {
+        console.warn("Replace button clicked but state was invalid.");
+        this.hideAllUIElements();
+        this.resetState();
+        return;
+      }
+
       try {
         const range = this.currentRange;
         const selection = this.currentSelection;
         const rawGeneratedText = this.generatedText;
         
-        // Find the element where the cursor or selection is
         let targetElement = range.startContainer;
         if (targetElement.nodeType === Node.TEXT_NODE) {
           targetElement = targetElement.parentNode;
         }
 
-        // Handle INPUT and TEXTAREA
         if (targetElement.tagName === 'INPUT' || targetElement.tagName === 'TEXTAREA') {
           const inputElement = targetElement;
-          const start = inputElement.selectionStart;
-          const end = inputElement.selectionEnd;
-          const currentValue = inputElement.value;
+          const start = inputElement.selectionStart || 0;
+          const end = inputElement.selectionEnd || 0;
+          const currentValue = inputElement.value || '';
           
-          // If no selection (start === end), insert at cursor position
-          // Otherwise replace the selected text
           const newValue = currentValue.substring(0, start) + rawGeneratedText + currentValue.substring(end);
           inputElement.value = newValue;
 
-          // Update cursor position after insertion
           const newCursorPos = start + rawGeneratedText.length;
           inputElement.focus();
           setTimeout(() => {
             inputElement.setSelectionRange(newCursorPos, newCursorPos);
           }, 0);
 
-          // Trigger input/change events
           inputElement.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
           inputElement.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
         } else {
-          // Handle contenteditable or other elements
           if (selection) {
             selection.removeAllRanges();
             selection.addRange(range);
           }
 
-          // Delete the current selection content or insert at cursor
           range.deleteContents();
 
-          // Determine if we should insert as HTML or plain text
           const isRichTextContext = targetElement.isContentEditable && 
                                    targetElement.getAttribute('contenteditable') !== 'false';
           const containsMarkdown = /[#*_\[\]`]/.test(rawGeneratedText);
@@ -755,7 +1176,6 @@ class Chikki {
           let nodeToInsert;
 
           if (isRichTextContext && containsMarkdown) {
-            // Render markdown to HTML for rich text contexts
             const tempContainer = document.createElement('div');
             let sanitized = this.sanitizeHTML(rawGeneratedText);
             tempContainer.innerHTML = this.parseMarkdown(sanitized);
@@ -783,89 +1203,145 @@ class Chikki {
         this.hideAllUIElements();
         this.resetState();
       }
-    } else {
-      console.warn("Replace button clicked but state was invalid.");
+    } catch (error) {
+      console.error("Error handling replace button click:", error);
       this.hideAllUIElements();
       this.resetState();
     }
   }
 
-  // Helper method to determine if we're in a plain text context
   isPlainTextContext(range) {
-    // Check if parent node is an input or textarea or has contenteditable=false
-    const node = range.startContainer;
-    const parent = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
-    
-    // Check if we're inside an input, textarea, or a node with contenteditable=false
-    return (
-      parent.tagName === 'INPUT' || 
-      parent.tagName === 'TEXTAREA' ||
-      parent.getAttribute('contenteditable') === 'false'
-    );
+    try {
+      const node = range.startContainer;
+      const parent = node.nodeType === Node.TEXT_NODE ? node.parentNode : node;
+      
+      return (
+        parent.tagName === 'INPUT' || 
+        parent.tagName === 'TEXTAREA' ||
+        parent.getAttribute('contenteditable') === 'false'
+      );
+    } catch (error) {
+      console.error("Error checking if context is plain text:", error);
+      return true;
+    }
   }
 
+  // Ensure handleClickOutside hides the icon if click is outside all UI
   handleClickOutside(event) {
-    if (!this.container.contains(event.target) &&
-        this.editIcon.style.display === 'none' && 
-        !this.promptContainer.classList.contains('active') && 
-        !this.resultContainer.classList.contains('active')) {
-      return;
-    }
+    try {
+      if (!event || !event.target) return;
 
-    if (this.container && !this.container.contains(event.target)) {
-      this.hideAllUIElements();
+      const isClickInsideUI = this.isClickInsideComponent(event);
+
+      if (!isClickInsideUI) {
+        // Click is outside all Chikki components, hide everything.
+        this.hideAllUIElements();
+        // Also explicitly ensure hasTextSelection is false if we hide due to outside click
+        // unless a new selection is immediately made (handled by mouseup)
+        // We might not need to set hasTextSelection false here, as mouseup will re-evaluate.
+      }
+      // If click is inside, let component handlers manage state.
+    } catch (error) {
+      console.error("Error handling click outside:", error);
+      this.hideAllUIElements(); // Hide on error as a safeguard
     }
   }
 
+  // Ensure hideAllUIElements correctly hides the edit icon too
   hideAllUIElements() {
-    this.resultContainer.classList.remove('active');
-    this.promptContainer.classList.remove('active', 'transitioning-out');
-    
-    setTimeout(() => {
-      this.editIcon.style.display = 'none';
-      this.editIcon.classList.remove('expanding');
-      this.promptContainer.style.display = 'none';
-      this.promptInput.value = '';
-      this.promptInput.disabled = false;
-      this.loadingIndicator.style.display = 'none';
-      this.skeletonContainer.style.display = 'none';
-      this.promptInput.style.display = 'block';
-    }, 300);
+    try {
+      if (this.resultContainer) {
+        this.resultContainer.classList.remove('active');
+      }
+      if (this.promptContainer) {
+        this.promptContainer.classList.remove('active', 'transitioning-out', 'loading');
+      }
+
+      setTimeout(() => {
+        if (this.editIcon) {
+          this.editIcon.style.display = 'none';
+          this.editIcon.classList.remove('expanding');
+        }
+
+        if (this.promptContainer) {
+          this.promptContainer.style.display = 'none';
+          if (this.promptInput) {
+            this.promptInput.value = '';
+            this.promptInput.disabled = false;
+            this.promptInput.style.display = 'block';
+            this.promptInput.style.opacity = '1';
+            this.promptInput.style.transform = 'none';
+          }
+          if (this.loadingIndicator) {
+            this.loadingIndicator.style.display = 'none';
+          }
+        }
+        if (this.resultContainer) {
+           this.resultContainer.style.display = 'none';
+        }
+        // Also hide the container
+        if (this.container) {
+          this.container.style.display = 'none';
+        }
+      }, 150);
+    } catch (error) {
+      console.error("Error hiding all UI elements:", error);
+    }
   }
 
   resetState() {
-    this.selectedText = '';
-    this.generatedText = '';
-    this.currentSelection = null;
-    this.currentRange = null;
-    this.isLoading = false;
-    
-    if (window.getSelection) {
-      window.getSelection().removeAllRanges();
+    try {
+      this.selectedText = '';
+      this.generatedText = '';
+      this.currentSelection = null;
+      this.currentRange = null;
+      this.isLoading = false;
+      
+      if (window.getSelection) {
+        const selection = window.getSelection();
+        if (selection) {
+          selection.removeAllRanges();
+        }
+      }
+    } catch (error) {
+      console.error("Error resetting state:", error);
     }
   }
 
   isClickInsideComponent(event) {
-    // Check if the click happened inside any of our UI components
-    if (!event || !event.target) return false;
-    
-    return (
-      this.container.contains(event.target) ||
-      this.editIcon.contains(event.target) ||
-      this.promptContainer.contains(event.target) ||
-      this.resultContainer.contains(event.target)
-    );
+    try {
+      if (!event || !event.target) return false;
+      
+      return (
+        (this.container && this.container.contains(event.target)) ||
+        (this.editIcon && this.editIcon.contains(event.target)) ||
+        (this.promptContainer && this.promptContainer.contains(event.target)) ||
+        (this.resultContainer && this.resultContainer.contains(event.target))
+      );
+    } catch (error) {
+      console.error("Error checking if click is inside component:", error);
+      return false;
+    }
   }
 }
 
 function initializeChikki() {
-  if (!window.chikkiInstance) {
-    window.chikkiInstance = new Chikki();
+  try {
+    if (!window.chikkiInstance) {
+      window.chikkiInstance = new Chikki();
+      console.log("Chikki initialized successfully");
+    }
+  } catch (error) {
+    console.error("Error initializing Chikki:", error);
   }
 }
 
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', initializeChikki);
-} else {
-  initializeChikki();
+try {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initializeChikki);
+  } else {
+    initializeChikki();
+  }
+} catch (error) {
+  console.error("Error setting up Chikki initialization:", error);
 }

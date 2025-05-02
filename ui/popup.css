@@ -1,7 +1,7 @@
 /* ui/popup.css */
 body {
     font-family: sans-serif;
-    width: 350px; /* Adjust width as needed */
+    width: 380px;
     padding: 10px;
     font-size: 14px;
     background-color: #f9f9f9;
@@ -10,7 +10,7 @@ body {
 .container {
     display: flex;
     flex-direction: column;
-    gap: 15px; /* Space between sections */
+    gap: 15px;
 }
 
 h3 {
@@ -20,13 +20,130 @@ h3 {
     color: #333;
 }
 
+h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    color: #444;
+}
+
 .section {
     background-color: #fff;
-    padding: 10px;
+    padding: 12px;
     border-radius: 5px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
+/* Auth Tabs */
+#auth-tabs {
+    display: flex;
+    margin-bottom: 15px;
+    border-bottom: 1px solid #ddd;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 8px;
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    font-weight: 500;
+    border-bottom: 2px solid transparent;
+}
+
+.tab-btn.active {
+    color: #007bff;
+    border-bottom: 2px solid #007bff;
+}
+
+.tab-btn:hover:not(.active) {
+    color: #0056b3;
+    background-color: #f5f5f5;
+}
+
+/* Auth Forms */
+.auth-form {
+    display: none;
+}
+
+.auth-form.active {
+    display: block;
+}
+
+.form-group {
+    margin-bottom: 12px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #555;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 13px;
+    box-sizing: border-box;
+}
+
+.full-width-btn {
+    width: 100%;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
+    background-color: #007bff;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.2s ease;
+}
+
+.full-width-btn:hover {
+    background-color: #0056b3;
+}
+
+/* API Health Indicator */
+.health-indicator {
+    display: flex;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.status-dot {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+    background-color: #ccc; /* Default color */
+}
+
+.status-dot.online {
+    background-color: #28a745; /* Green */
+}
+
+.status-dot.offline {
+    background-color: #dc3545; /* Red */
+}
+
+.status-dot.warning {
+    background-color: #ffc107; /* Yellow */
+}
+
+/* User Profile */
+#user-profile {
+    margin-bottom: 15px;
+}
+
+#user-profile p {
+    margin: 5px 0;
+}
+
+/* Original CSS */
 label {
     display: block;
     margin-bottom: 5px;
@@ -35,17 +152,18 @@ label {
 }
 
 textarea {
-    width: 95%; /* Allow padding */
+    width: 100%;
     padding: 8px;
     border: 1px solid #ccc;
     border-radius: 4px;
     font-size: 13px;
-    resize: vertical; /* Allow vertical resize */
-    background-color: #fff; /* Ensure background color for readonly */
+    resize: vertical;
+    box-sizing: border-box;
+    background-color: #fff;
 }
 
 textarea:read-only {
-    background-color: #eee; /* Slightly different background when readonly */
+    background-color: #eee;
 }
 
 button {
@@ -57,7 +175,7 @@ button {
     cursor: pointer;
     font-size: 13px;
     transition: background-color 0.2s ease;
-    margin-right: 5px; /* Space between buttons */
+    margin-right: 5px;
 }
 
 button:hover {
@@ -70,22 +188,22 @@ button:disabled {
 }
 
 .action-btn {
-    background-color: #6f42c1; /* Purple for actions */
+    background-color: #6f42c1;
 }
 .action-btn:hover:not(:disabled) {
     background-color: #5a3499;
 }
 
 #get-selection-btn {
-    background-color: #28a745; /* Green */
-    float: right; /* Position button next to label */
+    background-color: #28a745;
+    float: right;
 }
 #get-selection-btn:hover:not(:disabled) {
     background-color: #218838;
 }
 
 #copy-result-btn {
-     background-color: #ffc107; /* Yellow */
+     background-color: #ffc107;
      color: #333;
      float: right;
 }
@@ -93,18 +211,26 @@ button:disabled {
      background-color: #e0a800;
 }
 
+#logout-btn {
+    background-color: #dc3545;
+    margin-top: 5px;
+}
+
+#logout-btn:hover {
+    background-color: #c82333;
+}
 
 .actions {
     display: flex;
-    flex-wrap: wrap; /* Allow buttons to wrap */
-    gap: 8px; /* Space between action buttons */
+    flex-wrap: wrap;
+    gap: 8px;
     align-items: center;
 }
 .actions p {
     margin: 0;
     font-weight: bold;
     color: #555;
-    width: 100%; /* Take full width before buttons */
+    width: 100%;
     margin-bottom: 5px;
 }
 
@@ -112,14 +238,23 @@ button:disabled {
     margin-top: 5px;
     font-size: 12px;
     text-align: center;
-    min-height: 1.2em; /* Reserve space */
+    min-height: 1.2em;
 }
 
 .status.error {
-    color: #dc3545; /* Red for errors */
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.status.success {
+    color: #28a745;
     font-weight: bold;
 }
 
 .status.loading {
-    color: #007bff; /* Blue for loading */
+    color: #007bff;
+}
+
+.hidden {
+    display: none;
 }

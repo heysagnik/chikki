@@ -1,10 +1,9 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
 
 :root {
-  /* --- Colors (Keep Existing) --- */
   --chikki-primary: #4F46E5;
   --chikki-primary-hover: #4338CA;
-  --chikki-secondary: #FF7262; /* Unused currently, keep for potential future use */
+  --chikki-secondary: #FF7262;
   --chikki-neutral-50: #F9FAFB;
   --chikki-neutral-100: #F3F4F6;
   --chikki-neutral-200: #E5E7EB;
@@ -16,38 +15,39 @@
   --chikki-neutral-800: #1F2937;
   --chikki-neutral-900: #111827;
 
-  /* --- Notion-Inspired Styling --- */
   --chikki-font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-  --chikki-bg-default: white; /* Notion often uses pure white */
+  --chikki-bg-default: white;
   --chikki-bg-subtle: var(--chikki-neutral-50);
   --chikki-border-color: var(--chikki-neutral-200);
   --chikki-text-default: var(--chikki-neutral-900);
   --chikki-text-subtle: var(--chikki-neutral-600);
   --chikki-text-placeholder: var(--chikki-neutral-400);
 
-  /* Shadows - More subtle like Notion */
+  --chikki-prompt-bg: #ffffff;
+  --chikki-prompt-border: rgba(0, 0, 0, 0.1);
+  --chikki-prompt-text: #333333;
+  --chikki-prompt-placeholder: #9CA3AF;
+  --chikki-prompt-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
   --chikki-shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --chikki-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
-  --chikki-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1); /* Adjusted for subtlety */
+  --chikki-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
 
-  /* Border Radius - Slightly smaller */
   --chikki-border-radius-sm: 4px;
   --chikki-border-radius-md: 6px;
   --chikki-border-radius-lg: 8px;
+  --chikki-prompt-border-radius: 16px;
 
-  /* Transitions */
-  --chikki-transition-duration: 0.2s; /* Faster, more responsive feel */
+  --chikki-transition-duration: 0.2s;
   --chikki-transition-easing: ease-out;
 
-  /* Fixed dimensions (Keep existing, adjust if needed based on new design) */
-  --chikki-prompt-width: 340px;
-  --chikki-prompt-height: 56px; /* Slightly shorter */
-  --chikki-result-width: 400px;
-  --chikki-result-min-height: 180px; /* Slightly shorter */
-  --chikki-edit-icon-size: 40px; /* Slightly smaller */
+  --chikki-prompt-width: 450px;
+  --chikki-prompt-height: 130px;
+  --chikki-result-width: 500px;
+  --chikki-result-min-height: 220px;
+  --chikki-edit-icon-size: 40px;
 }
 
-/* --- Base Container --- */
 #chikki-container {
   font-family: var(--chikki-font-family) !important;
   z-index: 2147483647 !important;
@@ -56,9 +56,6 @@
   color: var(--chikki-text-default) !important;
 }
 
-/* --- Shared Container Styles (Icon, Prompt, Result) --- */
-#chikki-edit-icon,
-#chikki-prompt-container,
 #chikki-result-container {
   position: fixed !important;
   z-index: 2147483647 !important;
@@ -67,13 +64,14 @@
   box-shadow: var(--chikki-shadow-lg) !important;
   border: 1px solid var(--chikki-border-color) !important;
   box-sizing: border-box !important;
-  /* Removed backdrop-filter for Notion feel */
-  transition: all var(--chikki-transition-duration) var(--chikki-transition-easing) !important;
+  transition: opacity 0.3s var(--chikki-transition-easing),
+              transform 0.3s var(--chikki-transition-easing) !important;
 }
 
-/* --- Edit Icon --- */
 #chikki-edit-icon {
-  display: flex !important; /* Use flex for centering */
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  display: flex !important;
   align-items: center !important;
   justify-content: center !important;
   width: var(--chikki-edit-icon-size) !important;
@@ -82,9 +80,11 @@
   background-color: var(--chikki-primary) !important;
   border: none !important;
   cursor: pointer !important;
-  border-radius: 50% !important; /* Keep circular */
-  overflow: hidden !important; /* Hide content during transition */
+  border-radius: 50% !important;
+  overflow: hidden !important;
   transform-origin: center !important;
+  box-shadow: var(--chikki-shadow-lg) !important;
+  box-sizing: border-box !important;
   transition: width var(--chikki-transition-duration) var(--chikki-transition-easing),
               height var(--chikki-transition-duration) var(--chikki-transition-easing),
               border-radius var(--chikki-transition-duration) var(--chikki-transition-easing),
@@ -93,42 +93,44 @@
 }
 
 #chikki-edit-icon:hover {
-    background-color: var(--chikki-primary-hover) !important;
+  background-color: var(--chikki-primary-hover) !important;
 }
 
-/* Keep expansion animation logic, but use updated styles */
 #chikki-edit-icon.expanding {
   width: var(--chikki-prompt-width) !important;
   height: var(--chikki-prompt-height) !important;
-  border-radius: var(--chikki-border-radius-lg) !important; /* Match container radius */
-  background-color: var(--chikki-bg-default) !important;
-  border: 1px solid var(--chikki-border-color) !important;
+  border-radius: var(--chikki-border-radius-lg) !important;
+  background-color: var(--chikki-prompt-bg) !important;
+  border: 1px solid var(--chikki-prompt-border) !important;
   justify-content: flex-start !important;
-  padding: 12px !important; /* Adjusted padding */
-  /* Fine-tune transition timings */
+  padding: 12px !important;
+  box-shadow: var(--chikki-prompt-shadow) !important;
   transition: width 0.25s var(--chikki-transition-easing),
               height 0.2s var(--chikki-transition-easing),
               border-radius 0.2s var(--chikki-transition-easing),
               background-color 0.1s var(--chikki-transition-easing) !important;
 }
 
-/* --- Prompt Container --- */
 #chikki-prompt-container {
-  padding: 12px !important; /* Consistent padding */
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  box-sizing: border-box !important;
+  padding: 12px 16px !important;
   width: var(--chikki-prompt-width) !important;
   height: var(--chikki-prompt-height) !important;
-  max-width: var(--chikki-prompt-width) !important;
+  max-width: 94% !important;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: var(--chikki-prompt-border-radius) !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
   transform-origin: center !important;
   opacity: 0 !important;
-  display: block !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: space-between !important;
   pointer-events: none !important;
-  /* Removed gradient background */
-  /* Use slightly different shadow for active prompt */
-  box-shadow: var(--chikki-shadow-md), 0 0 0 1px rgba(0, 0, 0, 0.03) !important;
   transition: opacity var(--chikki-transition-duration) var(--chikki-transition-easing),
-              transform var(--chikki-transition-duration) var(--chikki-transition-easing),
-              height 0.25s var(--chikki-transition-easing),
-              width 0.25s var(--chikki-transition-easing) !important;
+              transform var(--chikki-transition-duration) var(--chikki-transition-easing) !important;
   overflow: hidden !important;
 }
 
@@ -137,13 +139,129 @@
   pointer-events: all !important;
 }
 
-/* Loading state transition */
 #chikki-prompt-container.loading {
   height: var(--chikki-result-min-height) !important;
   width: var(--chikki-result-width) !important;
-  /* Adjusted transition for loading state */
-  transition: height 0.25s var(--chikki-transition-easing) 0.05s,
-              width 0.25s var(--chikki-transition-easing) 0.05s !important;
+  transition: height 0.3s var(--chikki-transition-easing),
+              width 0.3s var(--chikki-transition-easing),
+              opacity 0.2s var(--chikki-transition-easing) 0.1s !important;
+}
+
+#chikki-prompt-input {
+  border: none !important;
+  background: transparent !important;
+  outline: none !important;
+  width: 100% !important;
+  flex: 1 !important;
+  min-height: 0 !important;
+  resize: none !important;
+  font-size: 14px !important;
+  font-family: var(--chikki-font-family) !important;
+  color: var(--chikki-text-default) !important;
+  padding: 0 !important;
+  margin-bottom: 8px !important;
+  line-height: 1.5 !important;
+}
+
+.chikki-bottom-bar {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  padding-top: 10px !important;
+  padding-bottom: 2px !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+  margin-top: auto !important;
+  flex-shrink: 0 !important;
+}
+
+.chikki-prompt-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.chikki-prompt-right {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.chikki-logo {
+  width: 20px !important;
+  height: 20px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  margin-right: 4px !important;
+}
+
+.chikki-dropdown {
+  display: flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--chikki-text-default) !important;
+  white-space: nowrap !important;
+  cursor: pointer !important;
+  padding: 3px 8px !important;
+  border-radius: 4px !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  background-color: rgba(0, 0, 0, 0.02) !important;
+}
+
+.chikki-dropdown:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.chikki-action-btn {
+  width: 28px !important;
+  height: 28px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 4px !important;
+  cursor: pointer !important;
+  color: var(--chikki-neutral-500) !important;
+}
+
+.chikki-action-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05) !important;
+  color: var(--chikki-neutral-700) !important;
+}
+
+.chikki-generate-button {
+  background-color: var(--chikki-primary) !important;
+  color: white !important;
+  border: none !important;
+  padding: 8px 20px !important;
+  margin-right: 25px !important;
+  margin-bottom: 16px !important;
+  border-radius: 6px !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background-color 0.15s ease-in-out, transform 0.15s ease-in-out !important;
+  outline: none !important;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15) !important;
+}
+
+.chikki-generate-button:hover {
+  background-color: var(--chikki-primary-hover) !important;
+  transform: translateY(-1px) !important;
+}
+
+.chikki-generate-button:active {
+  transform: translateY(1px) !important;
+}
+
+.chikki-generate-button.loading {
+  opacity: 0.7 !important;
+  cursor: not-allowed !important;
 }
 
 #chikki-prompt-container.transitioning-out {
@@ -151,86 +269,88 @@
   transform: translateY(5px) !important;
 }
 
-/* --- Prompt Input --- */
-#chikki-prompt-input {
-  width: 100% !important;
-  padding: 8px 12px !important; /* Adjusted padding */
-  border: none !important; /* Remove border by default */
-  border-radius: var(--chikki-border-radius-md) !important;
-  font-size: 14px !important;
-  font-family: inherit !important;
-  background-color: transparent !important; /* Blend with container */
-  color: var(--chikki-text-default) !important;
-  outline: none !important;
-  box-sizing: border-box !important;
-  transition: background-color 0.15s ease-in-out !important;
-  /* Removed inset shadow */
-}
-
-#chikki-prompt-input:focus {
-  /* Subtle background change on focus */
-  background-color: var(--chikki-bg-subtle) !important;
-  /* Remove box-shadow focus, rely on background */
-}
-
-#chikki-prompt-input::placeholder {
-  color: var(--chikki-text-placeholder) !important;
-}
-
-/* --- Skeleton Loader --- */
 @keyframes chikki-skeleton-loading {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
-#chikki-skeleton-container {
-  padding: 16px 12px !important; /* Match container padding */
-  width: 100% !important;
-  display: none;
-  /* Calculate height based on new result min-height and prompt height */
-  height: calc(var(--chikki-result-min-height) - var(--chikki-prompt-height)) !important;
-  transition: all 0.25s var(--chikki-transition-easing) !important;
-}
-
 .chikki-skeleton-line {
-  height: 16px !important; /* Slightly shorter */
+  height: 16px !important;
   border-radius: var(--chikki-border-radius-sm) !important;
-  /* Adjusted gradient colors for subtlety */
   background: linear-gradient(
     90deg,
-    var(--chikki-neutral-100) 25%,
-    var(--chikki-neutral-200) 50%,
-    var(--chikki-neutral-100) 75%
+    rgba(0, 0, 0, 0.05) 25%,
+    rgba(0, 0, 0, 0.1) 50%,
+    rgba(0, 0, 0, 0.05) 75%
   ) !important;
   background-size: 200% 100% !important;
-  animation: chikki-skeleton-loading 1.5s infinite linear !important; /* Use linear for smoother loop */
-  margin-bottom: 12px !important;
-  opacity: 0.9 !important;
+  animation: chikki-skeleton-loading 1.8s infinite ease-in-out !important;
+  margin-bottom: 16px !important;
 }
 
-/* Keep varied widths */
-.chikki-skeleton-line:nth-child(1) { width: 90% !important; }
-.chikki-skeleton-line:nth-child(2) { width: 100% !important; }
-.chikki-skeleton-line:nth-child(3) { width: 75% !important; }
-.chikki-skeleton-line:nth-child(4) { width: 85% !important; }
-.chikki-skeleton-line:nth-child(5) { width: 60% !important; }
+#chikki-loading {
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  color: var(--chikki-text-subtle) !important;
+  margin-bottom: 8px !important;
+  padding: 24px 24px 0 24px !important;
+  opacity: 0;
+  transition: opacity 0.2s ease-out !important;
+}
 
-/* --- Result Container --- */
+.chikki-skeleton-line:nth-child(1) {
+  width: 30% !important;
+  height: 12px !important;
+  margin-bottom: 20px !important;
+}
+
+.chikki-skeleton-line:nth-child(2) {
+  width: 90% !important;
+  height: 18px !important;
+  margin-bottom: 20px !important;
+}
+
+.chikki-skeleton-line:nth-child(3),
+.chikki-skeleton-line:nth-child(4),
+.chikki-skeleton-line:nth-child(5) {
+  width: 95% !important;
+  height: 16px !important;
+  margin-bottom: 14px !important;
+  margin-left: 20px !important;
+  position: relative !important;
+}
+
+.chikki-skeleton-line:nth-child(3):before,
+.chikki-skeleton-line:nth-child(4):before,
+.chikki-skeleton-line:nth-child(5):before {
+  content: "" !important;
+  position: absolute !important;
+  left: -20px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  width: 6px !important;
+  height: 6px !important;
+  border-radius: 50% !important;
+  background-color: rgba(0, 0, 0, 0.1) !important;
+}
+
 #chikki-result-container {
-  padding: 16px !important; /* Consistent padding */
+  padding: 16px !important;
   width: var(--chikki-result-width) !important;
   min-height: var(--chikki-result-min-height) !important;
   display: flex !important;
   flex-direction: column !important;
-  gap: 12px !important; /* Reduced gap */
+  gap: 12px !important;
   opacity: 0 !important;
   pointer-events: none !important;
-  transform: translateY(8px) !important; /* Slightly less movement */
+  transform: translateY(8px) !important;
   transform-origin: bottom center !important;
-  /* Removed gradient background */
-  transition: opacity var(--chikki-transition-duration) var(--chikki-transition-easing),
-              transform var(--chikki-transition-duration) var(--chikki-transition-easing),
-              height var(--chikki-transition-duration) var(--chikki-transition-easing) !important;
+  background-color: var(--chikki-bg-default) !important;
+  border: 1px solid var(--chikki-border-color) !important;
+  border-radius: var(--chikki-border-radius-lg) !important;
+  box-shadow: var(--chikki-shadow-lg) !important;
+  transition: opacity 0.3s var(--chikki-transition-easing),
+              transform 0.3s var(--chikki-transition-easing) !important;
 }
 
 #chikki-result-container.active {
@@ -239,55 +359,52 @@
   transform: translateY(0) !important;
 }
 
-/* --- Result Content Area --- */
 #chikki-generated-content {
   flex: 1 !important;
-  color: var(--chikki-text-default) !important; /* Use default text color */
+  color: var(--chikki-text-default) !important;
   font-size: 14px !important;
-  line-height: 1.6 !important;
+  line-height: 1.7 !important;
   overflow-y: auto !important;
-  /* Calculate max-height based on new min-height and button area */
-  max-height: calc(var(--chikki-result-min-height) - 70px) !important; /* Adjust 70px based on button container height */
-  padding: 4px !important; /* Minimal padding for scroll area */
+  max-height: calc(var(--chikki-result-min-height) - 90px) !important;
+  padding: 8px 4px !important;
+  padding-bottom: 70px !important; /* Add padding to bottom to prevent content being hidden behind button container */
   border-radius: var(--chikki-border-radius-md) !important;
-  /* Keep non-selectable */
-  user-select: none !important;
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
+  user-select: text !important;
+  -webkit-user-select: text !important;
+  -moz-user-select: text !important;
+  -ms-user-select: text !important;
+  transition: opacity 0.25s ease-out !important;
+  min-height: 80px !important;
 }
 
-/* --- Button Container --- */
 .chikki-button-container {
   display: flex !important;
-  justify-content: flex-end !important; /* Align buttons to the right like Notion */
-  gap: 8px !important; /* Reduced gap */
-  margin-top: auto !important; /* Push to bottom */
-  padding-top: 12px !important;
+  justify-content: flex-end !important;
+  gap: 12px !important;
+  padding-top: 16px !important;
+  padding-bottom: 4px !important;
   border-top: 1px solid var(--chikki-border-color) !important;
-}
+  }
 
-/* --- Buttons --- */
 #chikki-regenerate-button,
 #chikki-replace-button {
-  padding: 6px 12px !important; /* Adjusted padding */
+  padding: 6px 12px !important;
   border-radius: var(--chikki-border-radius-md) !important;
   font-size: 13px !important;
   font-weight: 500 !important;
   cursor: pointer !important;
   transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out !important;
-  display: inline-flex !important; /* Use inline-flex */
+  display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
-  border: 1px solid transparent !important; /* Add transparent border for layout consistency */
+  border: 1px solid transparent !important;
   outline: none !important;
-  /* Removed box-shadow */
 }
 
 #chikki-regenerate-button {
   background-color: var(--chikki-bg-default) !important;
   color: var(--chikki-text-subtle) !important;
-  border-color: var(--chikki-border-color) !important; /* Subtle border */
+  border-color: var(--chikki-border-color) !important;
 }
 
 #chikki-regenerate-button:hover {
@@ -296,6 +413,10 @@
 }
 
 #chikki-replace-button {
+  padding: 8px 18px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.2px !important;
+  box-shadow: 0 2px 4px rgba(79, 70, 229, 0.2) !important;
   background-color: var(--chikki-primary) !important;
   color: white !important;
   border-color: var(--chikki-primary) !important;
@@ -306,7 +427,6 @@
   border-color: var(--chikki-primary-hover) !important;
 }
 
-/* --- Loading Pulse Animation --- */
 @keyframes chikki-pulse {
   50% { opacity: 0.7; }
 }
@@ -315,7 +435,6 @@
   animation: chikki-pulse 1.2s infinite ease-in-out !important;
 }
 
-/* --- Markdown Styling --- */
 .chikki-markdown h1,
 .chikki-markdown h2,
 .chikki-markdown h3,
@@ -329,12 +448,12 @@
   color: var(--chikki-text-default) !important;
 }
 
-.chikki-markdown h1 { font-size: 1.25em !important; } /* ~18px */
-.chikki-markdown h2 { font-size: 1.15em !important; } /* ~16px */
-.chikki-markdown h3 { font-size: 1.05em !important; } /* ~15px */
+.chikki-markdown h1 { font-size: 1.25em !important; }
+.chikki-markdown h2 { font-size: 1.15em !important; }
+.chikki-markdown h3 { font-size: 1.05em !important; }
 .chikki-markdown h4,
 .chikki-markdown h5,
-.chikki-markdown h6 { font-size: 1em !important; } /* ~14px */
+.chikki-markdown h6 { font-size: 1em !important; }
 
 .chikki-markdown p {
   margin: 0.5em 0 !important;
@@ -343,7 +462,7 @@
 .chikki-markdown ul,
 .chikki-markdown ol {
   margin: 0.75em 0 !important;
-  padding-left: 1.5em !important; /* Standard indent */
+  padding-left: 1.5em !important;
 }
 
 .chikki-markdown li {
@@ -353,23 +472,23 @@
 .chikki-markdown a {
   color: var(--chikki-primary) !important;
   text-decoration: none !important;
-  border-bottom: 1px solid rgba(79, 70, 229, 0.3) !important; /* Subtle underline */
+  border-bottom: 1px solid rgba(79, 70, 229, 0.3) !important;
   transition: border-color 0.15s ease-in-out !important;
 }
 
 .chikki-markdown a:hover {
   border-bottom-color: var(--chikki-primary) !important;
-  text-decoration: none !important; /* Remove default underline on hover */
+  text-decoration: none !important;
 }
 
 .chikki-markdown code {
   font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace !important;
   padding: 0.15em 0.4em !important;
-  font-size: 0.9em !important; /* Slightly smaller */
+  font-size: 0.9em !important;
   background-color: var(--chikki-neutral-100) !important;
-  border: 1px solid var(--chikki-neutral-200) !important; /* Subtle border */
+  border: 1px solid var(--chikki-neutral-200) !important;
   border-radius: var(--chikki-border-radius-sm) !important;
-  color: #EB5757; /* Notion's typical inline code color */
+  color: #EB5757;
 }
 
 .chikki-markdown pre {
@@ -387,7 +506,7 @@
   padding: 0 !important;
   border: none !important;
   border-radius: 0 !important;
-  color: inherit !important; /* Inherit color from pre */
+  color: inherit !important;
   font-size: inherit !important;
 }
 
@@ -395,7 +514,7 @@
   margin: 1em 0 !important;
   padding: 0 1em !important;
   color: var(--chikki-text-subtle) !important;
-  border-left: 3px solid var(--chikki-border-color) !important; /* Keep border, but use standard border color */
+  border-left: 3px solid var(--chikki-border-color) !important;
 }
 
 .chikki-markdown hr {
@@ -403,4 +522,125 @@
   height: 1px !important;
   background-color: var(--chikki-border-color) !important;
   margin: 1.5em 0 !important;
+}
+
+.chikki-result-actions {
+  display: flex !important;
+  align-items: center !important;
+  padding-top: 12px !important;
+  margin-top: auto !important;
+  border-top: 1px solid var(--chikki-neutral-200) !important;
+}
+
+.chikki-action-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 6px 12px !important;
+  border-radius: 4px !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  background: transparent !important;
+  color: var(--chikki-text-subtle) !important;
+  border: 1px solid var(--chikki-neutral-200) !important;
+  cursor: pointer !important;
+  margin-right: 8px !important;
+}
+
+.chikki-action-button:hover {
+  background-color: var(--chikki-bg-subtle) !important;
+}
+
+.chikki-action-button.primary {
+  background-color: #2B579A !important;
+  color: white !important;
+  border-color: #2B579A !important;
+}
+
+.chikki-action-button.primary:hover {
+  background-color: #204072 !important;
+}
+
+.chikki-action-button svg {
+  width: 16px !important;
+  height: 16px !important;
+}
+
+.chikki-action-button.success {
+  background-color: #4CAF50 !important;
+  color: white !important;
+  border-color: #4CAF50 !important;
+}
+
+.chikki-universal-container {
+  position: fixed !important;
+  z-index: 2147483647 !important;
+  box-sizing: border-box !important;
+  width: var(--chikki-prompt-width) !important;
+  height: var(--chikki-prompt-height) !important;
+  max-width: 96% !important;
+  background-color: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 16px !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08) !important;
+  transform-origin: center !important;
+  opacity: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  pointer-events: none !important;
+  transition: opacity 0.25s ease-out,
+              transform 0.25s ease-out,
+              height 0.3s ease-out !important;
+}
+
+.chikki-universal-container.active {
+  opacity: 1 !important;
+  pointer-events: all !important;
+}
+
+.chikki-universal-container.loading {
+  height: var(--chikki-result-min-height) !important;
+  transition: height 0.3s ease-out !important;
+}
+
+.chikki-universal-container.result-mode {
+  height: auto !important;
+  min-height: var(--chikki-result-min-height) !important;
+  max-height: 85vh !important;
+}
+
+.chikki-universal-container.result-mode .chikki-result-section {
+  display: flex !important;
+}
+
+.chikki-prompt-section {
+  display: flex !important;
+  flex-direction: column !important;
+  padding: 12px 16px !important;
+  width: 100% !important;
+  height: 100% !important;
+  opacity: 1 !important;
+  transition: opacity 0.2s ease-out !important;
+}
+
+.chikki-universal-container.loading .chikki-prompt-section,
+.chikki-universal-container.result-mode .chikki-prompt-section {
+  display: none !important;
+}
+
+.chikki-universal-container.loading #chikki-skeleton-container {
+  display: block !important;
+  opacity: 1 !important;
+}
+
+.chikki-result-section {
+  display: none !important;
+  flex-direction: column !important;
+  padding: 20px !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: calc(100% - 40px) !important;
+  box-sizing: border-box !important;
+  position: relative !important;
 }
